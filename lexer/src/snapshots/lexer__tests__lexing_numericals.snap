@@ -1,0 +1,96 @@
+---
+source: lexer/src/lib.rs
+expression: all_tokens
+---
+[
+    Float {
+        value: 12346.6789,
+        size: None,
+    },
+    Integer {
+        value: 1234567890,
+        size: None,
+    },
+    Float {
+        value: 98765.4321,
+        size: None,
+    },
+    Float {
+        value: 98765.4321,
+        size: None,
+    },
+    Integer {
+        value: 9876543210,
+        size: None,
+    },
+    Integer {
+        value: 9876543210,
+        size: None,
+    },
+    Float {
+        value: -98765.4321,
+        size: None,
+    },
+    Float {
+        value: -12346.6789,
+        size: None,
+    },
+    Float {
+        value: -12346.6789,
+        size: None,
+    },
+    SignedInteger {
+        value: -1234567890,
+        size: None,
+    },
+    SignedInteger {
+        value: -9876543210,
+        size: None,
+    },
+    SignedInteger {
+        value: -9876543210,
+        size: None,
+    },
+    SignedInteger {
+        value: -9876,
+        size: None,
+    },
+    SignedInteger {
+        value: -5,
+        size: None,
+    },
+    SignedInteger {
+        value: -43210,
+        size: None,
+    },
+    SignedInteger {
+        value: -123456789,
+        size: Some(
+            I32,
+        ),
+    },
+    Integer {
+        value: 123456789,
+        size: Some(
+            Usize,
+        ),
+    },
+    Float {
+        value: 123.456789,
+        size: Some(
+            F64,
+        ),
+    },
+    Float {
+        value: 123.456789,
+        size: Some(
+            F64,
+        ),
+    },
+    SignedInteger {
+        value: -12,
+        size: Some(
+            F8,
+        ),
+    },
+]
