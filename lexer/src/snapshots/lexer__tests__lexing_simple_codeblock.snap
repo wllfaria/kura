@@ -1,0 +1,74 @@
+---
+source: lexer/src/lib.rs
+expression: calculate_circumference_function
+---
+[
+    Fun,
+    Ident(
+        "calculate_circumference",
+    ),
+    LeftParen,
+    Ident(
+        "diameter",
+    ),
+    Colon,
+    Ident(
+        "f64",
+    ),
+    RightParen,
+    ThickArrow,
+    Ident(
+        "f64",
+    ),
+    LeftBrace,
+    Const,
+    Ident(
+        "pi",
+    ),
+    Equal,
+    Float {
+        value: 3.141592653589793,
+        size: Some(
+            F32,
+        ),
+    },
+    SemiColon,
+    Const,
+    Ident(
+        "radius",
+    ),
+    Equal,
+    Ident(
+        "diameter",
+    ),
+    Slash,
+    Float {
+        value: 2.0,
+        size: None,
+    },
+    SemiColon,
+    Const,
+    Ident(
+        "circumference",
+    ),
+    Equal,
+    Float {
+        value: 2.0,
+        size: None,
+    },
+    Star,
+    Ident(
+        "pi",
+    ),
+    Star,
+    Ident(
+        "radius",
+    ),
+    SemiColon,
+    Return,
+    Ident(
+        "circumference",
+    ),
+    SemiColon,
+    RightBrace,
+]

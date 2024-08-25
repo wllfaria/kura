@@ -1,0 +1,33 @@
+---
+source: lexer/src/lib.rs
+expression: punctuations
+---
+[
+    LeftParen,
+    RightParen,
+    LeftBracket,
+    RightBracket,
+    LeftBrace,
+    RightBrace,
+    Comma,
+    Dot,
+    Plus,
+    Minus,
+    Equal,
+    Star,
+    Ampersand,
+    MultiplyAssign,
+    AddAssign,
+    MinusAssign,
+    DivideAssign,
+    Bang,
+    NotEqual,
+    EqualEqual,
+    LessEqual,
+    GreaterEqual,
+    Less,
+    Greater,
+    Slash,
+    Colon,
+    SemiColon,
+]

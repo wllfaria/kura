@@ -2,31 +2,29 @@
 
 ```rust
 struct StructName {
-    struct_field i32
+    struct_field: usize
+    another_struct_field: String,
 }
 
 let name = fun(abc i32, something_else ) -> i32 {}
 fun name(some_argument i32, another_argument usize) -> i32 {}
 
 fun main() {
-    let fixed_array = [1, 2, 3, 4]; // its capable of inferring type?
-    let vectors = Vec([1, 2, 3, 4]); // initialized vector, it infers i32
-    let typed_array: <i32>[4] = [1, 2, 3, 4];
-    let typed_vector: vec<i32>  = Vec() // empty vector
+    const fixed_array = [1, 2, 3, 4];
+    // var typed_vector: vec<StructName>  = Vec()
 
-    let arguments = match arguments {
-        | None -> panic();
-        | Some(t) -> return t;
+    if fixed_array.find(3) {
+        const my_struct StructName {
+            struct_field = usize(10),
+            another_struct_field = String("something"),
+        };
+
+        return my_struct;
+    }
+
+    return StructName {
+        struct_field = 0,
+        another_struct_field = String(""),
     }
 }
-
-fn (args) name {} 
-fun()
-
-// immutable variable
-const var_name = 1;
-// mutable variable
-let a = statement;
-
-
 ```

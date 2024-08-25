@@ -85,7 +85,11 @@ impl<'lex> Lexer<'lex> {
             .find(|c: char| c.is_whitespace())
             .unwrap_or(self.source.len());
 
-        let postfix = &self.source[..end_of_postfix];
+        let mut postfix = &self.source[..end_of_postfix];
+        if postfix.ends_with(';') {
+            postfix = postfix.trim_matches(';');
+        }
+
         let size = match NumSize::try_from(postfix) {
             Ok(size) => Some(size),
             Err(_) => None,
@@ -137,6 +141,11 @@ impl<'lex> Lexer<'lex> {
             }),
         }
     }
+
+    fn advance_by(&mut self, amount: usize) {
+        self.source = &self.source[amount..];
+        self.pos += amount;
+    }
 }
 
 impl<'lex> Iterator for Lexer<'lex> {
@@ -147,18 +156,107 @@ impl<'lex> Iterator for Lexer<'lex> {
             let mut chars = self.source.chars().peekable();
             let c = chars.next()?;
 
+            let mut simple_token = |token: Token<'lex>| {
+                self.advance_by(c.len_utf8());
+                Some(Ok(token))
+            };
+
+            let mut token_from_pairs = |pairs: Vec<(char, Token<'lex>)>, default: Token<'lex>| {
+                let Some(next) = chars.peek() else {
+                    return (default, 1);
+                };
+
+                for pair in pairs {
+                    if next == &pair.0 {
+                        return (pair.1, 2);
+                    }
+                }
+
+                (default, 1)
+            };
+
             match c {
                 c if c.is_whitespace() => {
-                    self.source = &self.source[c.len_utf8()..];
-                    self.pos += c.len_utf8();
+                    self.advance_by(c.len_utf8());
                     continue;
                 }
                 c if c.is_numeric() => return Some(self.lex_numerals()),
+                '(' => return simple_token(Token::LeftParen),
+                ')' => return simple_token(Token::RightParen),
+                '[' => return simple_token(Token::LeftBracket),
+                ']' => return simple_token(Token::RightBracket),
+                '{' => return simple_token(Token::LeftBrace),
+                '}' => return simple_token(Token::RightBrace),
+                ':' => return simple_token(Token::Colon),
+                ';' => return simple_token(Token::SemiColon),
+                ',' => return simple_token(Token::Comma),
+                '.' => return simple_token(Token::Dot),
+                '+' => {
+                    let (token, advance) =
+                        token_from_pairs(vec![('=', Token::AddAssign)], Token::Plus);
+                    self.advance_by(advance);
+                    return Some(Ok(token));
+                }
+                '=' => {
+                    let (token, advance) = token_from_pairs(
+                        vec![('=', Token::EqualEqual), ('>', Token::ThickArrow)],
+                        Token::Equal,
+                    );
+                    self.advance_by(advance);
+                    return Some(Ok(token));
+                }
+                '*' => {
+                    let (token, advance) =
+                        token_from_pairs(vec![('=', Token::MultiplyAssign)], Token::Star);
+                    self.advance_by(advance);
+                    return Some(Ok(token));
+                }
+                '&' => return simple_token(Token::Ampersand),
+                '/' => {
+                    let (token, advance) =
+                        token_from_pairs(vec![('=', Token::DivideAssign)], Token::Slash);
+                    self.advance_by(advance);
+                    return Some(Ok(token));
+                }
+                '!' => {
+                    let (token, advance) =
+                        token_from_pairs(vec![('=', Token::NotEqual)], Token::Bang);
+                    self.advance_by(advance);
+                    return Some(Ok(token));
+                }
+                '<' => {
+                    let (token, advance) =
+                        token_from_pairs(vec![('=', Token::LessEqual)], Token::Less);
+                    self.advance_by(advance);
+                    return Some(Ok(token));
+                }
+                '>' => {
+                    let (token, advance) =
+                        token_from_pairs(vec![('=', Token::GreaterEqual)], Token::Greater);
+                    self.advance_by(advance);
+                    return Some(Ok(token));
+                }
                 '-' => match chars.peek() {
                     Some(c) if c.is_numeric() => return Some(self.lex_numerals()),
-                    _ => todo!(),
+                    Some('=') => {
+                        self.source = &self.source[c.len_utf8() + 1..];
+                        self.pos += 2;
+                        return Some(Ok(Token::MinusAssign));
+                    }
+                    _ => return simple_token(Token::Minus),
                 },
-                _ => todo!(),
+                _ => {
+                    let next_whitespace = self
+                        .source
+                        .find(|c| !matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9'))
+                        .unwrap_or(self.source.len());
+
+                    let identifier = &self.source[..next_whitespace];
+
+                    self.advance_by(next_whitespace);
+
+                    return Some(Ok(Token::identifier_from(identifier)));
+                }
             };
         }
     }
@@ -196,15 +294,71 @@ mod tests {
             "123.456789f64",
             "123.456789f64",
             "-12f8",
+            "3.14159265358979323846264338327950288_f32",
+            "3.141592653f32;",
         ];
         let source = source.join("\n");
 
-        let mut all_tokens = vec![];
+        let mut numerals = vec![];
 
         for token in make_sut(&source) {
-            all_tokens.push(token.unwrap());
+            numerals.push(token.unwrap());
         }
 
-        insta::assert_debug_snapshot!(all_tokens);
+        insta::assert_debug_snapshot!(numerals);
+    }
+
+    #[test]
+    fn lexing_punctuations() {
+        let source = [
+            "()", "[]", "{}", ",", ".", "+", "-", "=", "*", "&", "*=", "+=", "-=", "/=", "!", "!=",
+            "==", "<=", ">=", "<", ">", "/", ":", ";",
+        ];
+        let source = source.join(" ");
+
+        let mut punctuations = vec![];
+        for token in make_sut(&source) {
+            punctuations.push(token.unwrap());
+        }
+
+        insta::assert_debug_snapshot!(punctuations);
+    }
+
+    #[test]
+    fn lexing_builtin_identifiers() {
+        let source = [
+            "var", "const", "match", "if", "else", "fun", "struct", "enum", "return",
+        ];
+
+        let source = source.join(" ");
+
+        let mut builtin_identifiers = vec![];
+        for token in make_sut(&source) {
+            builtin_identifiers.push(token.unwrap());
+        }
+
+        insta::assert_debug_snapshot!(builtin_identifiers);
+    }
+
+    #[test]
+    fn lexing_simple_codeblock() {
+        let source = [
+            "fun calculate_circumference(diameter: f64) => f64 {",
+            "   const pi = 3.14159265358979323846264338327950288_f32;",
+            "   const radius = diameter / 2.0;",
+            "   const circumference = 2.0 * pi * radius;",
+            "",
+            "   return circumference;",
+            "}",
+        ];
+
+        let source = source.join("\n");
+
+        let mut calculate_circumference_function = vec![];
+        for token in make_sut(&source) {
+            calculate_circumference_function.push(token.unwrap());
+        }
+
+        insta::assert_debug_snapshot!(calculate_circumference_function);
     }
 }

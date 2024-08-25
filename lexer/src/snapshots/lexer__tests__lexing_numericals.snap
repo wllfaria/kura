@@ -1,6 +1,6 @@
 ---
 source: lexer/src/lib.rs
-expression: all_tokens
+expression: numerals
 ---
 [
     Float {
@@ -93,4 +93,17 @@ expression: all_tokens
             F8,
         ),
     },
+    Float {
+        value: 3.141592653589793,
+        size: Some(
+            F32,
+        ),
+    },
+    Float {
+        value: 3.141592653,
+        size: Some(
+            F32,
+        ),
+    },
+    SemiColon,
 ]

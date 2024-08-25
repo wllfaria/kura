@@ -1,0 +1,15 @@
+---
+source: lexer/src/lib.rs
+expression: builtin_identifiers
+---
+[
+    Var,
+    Const,
+    Match,
+    If,
+    Else,
+    Fun,
+    Struct,
+    Enum,
+    Return,
+]
