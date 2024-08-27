@@ -1,0 +1,41 @@
+---
+source: parser/src/lib.rs
+expression: result
+---
+[
+    VarNode {
+        name: "some_name",
+        value: BinaryOp {
+            operator: Sub,
+            lhs: BinaryOp {
+                operator: Add,
+                lhs: IntegerLiteral {
+                    value: 1,
+                    size: None,
+                },
+                rhs: BinaryOp {
+                    operator: Mul,
+                    lhs: IntegerLiteral {
+                        value: 2,
+                        size: None,
+                    },
+                    rhs: IntegerLiteral {
+                        value: 3,
+                        size: None,
+                    },
+                },
+            },
+            rhs: IntegerLiteral {
+                value: 4,
+                size: None,
+            },
+        },
+    },
+    VarNode {
+        name: "another_name",
+        value: FloatLiteral {
+            value: 123.4,
+            size: None,
+        },
+    },
+]

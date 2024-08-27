@@ -66,43 +66,57 @@ expression: numerals
     SignedInteger {
         value: -123456789,
         size: Some(
-            I32,
+            SignedInt(
+                I32,
+            ),
         ),
     },
     Integer {
         value: 123456789,
         size: Some(
-            Usize,
+            UnsignedInt(
+                Usize,
+            ),
         ),
     },
     Float {
         value: 123.456789,
         size: Some(
-            F64,
+            Float(
+                F64,
+            ),
         ),
     },
     Float {
         value: 123.456789,
         size: Some(
-            F64,
+            Float(
+                F64,
+            ),
         ),
     },
     SignedInteger {
         value: -12,
         size: Some(
-            F8,
+            Float(
+                F8,
+            ),
         ),
     },
     Float {
         value: 3.141592653589793,
         size: Some(
-            F32,
+            Float(
+                F32,
+            ),
         ),
     },
     Float {
         value: 3.141592653,
         size: Some(
-            F32,
+            Float(
+                F32,
+            ),
         ),
     },
     SemiColon,

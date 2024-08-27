@@ -29,7 +29,9 @@ expression: calculate_circumference_function
     Float {
         value: 3.141592653589793,
         size: Some(
-            F32,
+            Float(
+                F32,
+            ),
         ),
     },
     SemiColon,

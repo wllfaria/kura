@@ -1,5 +1,7 @@
 [workspace]
-members = ["lexer"]
+members = ["lexer", "parser"]
 
 [workspace.dependencies]
+lexer = { path = "./lexer" }
+
 miette = { version = "7.2.0", features = ["fancy"] }

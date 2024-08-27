@@ -1,0 +1,11 @@
+[package]
+name = "parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lexer.workspace = true
+miette.workspace = true
+
+[dev-dependencies]
+insta = "1.39.0"

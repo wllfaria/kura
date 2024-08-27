@@ -2,12 +2,13 @@ use miette::{Error, LabeledSpan};
 
 mod token;
 
-use token::{NumSize, Token};
+pub use token::{FloatSizes, NumSize, SignedIntSizes, Token, UnsignedIntSizes};
 
-struct Lexer<'lex> {
+pub struct Lexer<'lex> {
     pos: usize,
     source: &'lex str,
     complete_source: &'lex str,
+    peeked: Option<Result<Token<'lex>, Error>>,
 }
 
 impl<'lex> Lexer<'lex> {
@@ -16,11 +17,109 @@ impl<'lex> Lexer<'lex> {
             pos: 0,
             source,
             complete_source: source,
+            peeked: None,
+        }
+    }
+
+    pub fn source_code(&self) -> &str {
+        self.complete_source
+    }
+
+    pub fn peek(&mut self) -> Option<&Result<Token<'lex>, Error>> {
+        if self.peeked.is_none() {
+            self.peeked = self.next();
+        }
+        self.peeked.as_ref()
+    }
+
+    pub fn is_empty(&mut self) -> bool {
+        self.peek().is_none()
+    }
+}
+
+impl<'lex> Iterator for Lexer<'lex> {
+    type Item = Result<Token<'lex>, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(peeked) = self.peeked.take() {
+                return Some(peeked);
+            }
+
+            let mut chars = self.source.chars().peekable();
+            let c = chars.next()?;
+
+            let next = chars.peek().copied();
+
+            let mut make_token = |token: Token<'lex>, size: u8| {
+                self.advance_by(size.into());
+                Some(Ok(token))
+            };
+
+            break match (c, next) {
+                (c, _) if c.is_whitespace() => {
+                    self.advance_by(c.len_utf8());
+                    continue;
+                }
+                // ----------------------------------------------------
+                // DOUBLE TOKENS
+                // ----------------------------------------------------
+                ('+', Some('=')) => make_token(Token::AddAssign, 2),
+                ('=', Some('=')) => make_token(Token::EqualEqual, 2),
+                ('=', Some('>')) => make_token(Token::ThickArrow, 2),
+                ('*', Some('=')) => make_token(Token::MultiplyAssign, 2),
+                ('/', Some('=')) => make_token(Token::DivideAssign, 2),
+                ('!', Some('=')) => make_token(Token::NotEqual, 2),
+                ('<', Some('=')) => make_token(Token::LessEqual, 2),
+                ('>', Some('=')) => make_token(Token::GreaterEqual, 2),
+                ('-', Some('=')) => make_token(Token::MinusAssign, 2),
+                ('-', Some(c)) if c.is_numeric() => Some(self.lex_numerals()),
+
+                // ----------------------------------------------------
+                // SINGLE TOKENS
+                // ----------------------------------------------------
+                ('(', _) => make_token(Token::LeftParen, 1),
+                (')', _) => make_token(Token::RightParen, 1),
+                ('[', _) => make_token(Token::LeftBracket, 1),
+                (']', _) => make_token(Token::RightBracket, 1),
+                ('{', _) => make_token(Token::LeftBrace, 1),
+                ('}', _) => make_token(Token::RightBrace, 1),
+                (':', _) => make_token(Token::Colon, 1),
+                (';', _) => make_token(Token::SemiColon, 1),
+                (',', _) => make_token(Token::Comma, 1),
+                ('.', _) => make_token(Token::Dot, 1),
+                ('+', _) => make_token(Token::Plus, 1),
+                ('=', _) => make_token(Token::Equal, 1),
+                ('*', _) => make_token(Token::Star, 1),
+                ('&', _) => make_token(Token::Ampersand, 1),
+                ('/', _) => make_token(Token::Slash, 1),
+                ('!', _) => make_token(Token::Bang, 1),
+                ('<', _) => make_token(Token::Less, 1),
+                ('>', _) => make_token(Token::Greater, 1),
+                ('-', _) => make_token(Token::Minus, 1),
+
+                ('a'..='z' | 'A'..='Z' | '_', _) => Some(Ok(self.lex_identifier())),
+                ('0'..='9', _) => Some(self.lex_numerals()),
+                _ => Some(Ok(Token::Eof)),
+            };
         }
     }
 }
 
 impl<'lex> Lexer<'lex> {
+    fn lex_identifier(&mut self) -> Token<'lex> {
+        let next_whitespace = self
+            .source
+            .find(|c| !matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9'))
+            .unwrap_or(self.source.len());
+
+        let identifier = &self.source[..next_whitespace];
+
+        self.advance_by(next_whitespace);
+
+        Token::identifier_from(identifier)
+    }
+
     fn lex_numerals(&mut self) -> Result<Token<'lex>, Error> {
         let end_of_numeral = self
             .source
@@ -145,120 +244,6 @@ impl<'lex> Lexer<'lex> {
     fn advance_by(&mut self, amount: usize) {
         self.source = &self.source[amount..];
         self.pos += amount;
-    }
-}
-
-impl<'lex> Iterator for Lexer<'lex> {
-    type Item = Result<Token<'lex>, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            let mut chars = self.source.chars().peekable();
-            let c = chars.next()?;
-
-            let mut simple_token = |token: Token<'lex>| {
-                self.advance_by(c.len_utf8());
-                Some(Ok(token))
-            };
-
-            let mut token_from_pairs = |pairs: Vec<(char, Token<'lex>)>, default: Token<'lex>| {
-                let Some(next) = chars.peek() else {
-                    return (default, 1);
-                };
-
-                for pair in pairs {
-                    if next == &pair.0 {
-                        return (pair.1, 2);
-                    }
-                }
-
-                (default, 1)
-            };
-
-            match c {
-                c if c.is_whitespace() => {
-                    self.advance_by(c.len_utf8());
-                    continue;
-                }
-                c if c.is_numeric() => return Some(self.lex_numerals()),
-                '(' => return simple_token(Token::LeftParen),
-                ')' => return simple_token(Token::RightParen),
-                '[' => return simple_token(Token::LeftBracket),
-                ']' => return simple_token(Token::RightBracket),
-                '{' => return simple_token(Token::LeftBrace),
-                '}' => return simple_token(Token::RightBrace),
-                ':' => return simple_token(Token::Colon),
-                ';' => return simple_token(Token::SemiColon),
-                ',' => return simple_token(Token::Comma),
-                '.' => return simple_token(Token::Dot),
-                '+' => {
-                    let (token, advance) =
-                        token_from_pairs(vec![('=', Token::AddAssign)], Token::Plus);
-                    self.advance_by(advance);
-                    return Some(Ok(token));
-                }
-                '=' => {
-                    let (token, advance) = token_from_pairs(
-                        vec![('=', Token::EqualEqual), ('>', Token::ThickArrow)],
-                        Token::Equal,
-                    );
-                    self.advance_by(advance);
-                    return Some(Ok(token));
-                }
-                '*' => {
-                    let (token, advance) =
-                        token_from_pairs(vec![('=', Token::MultiplyAssign)], Token::Star);
-                    self.advance_by(advance);
-                    return Some(Ok(token));
-                }
-                '&' => return simple_token(Token::Ampersand),
-                '/' => {
-                    let (token, advance) =
-                        token_from_pairs(vec![('=', Token::DivideAssign)], Token::Slash);
-                    self.advance_by(advance);
-                    return Some(Ok(token));
-                }
-                '!' => {
-                    let (token, advance) =
-                        token_from_pairs(vec![('=', Token::NotEqual)], Token::Bang);
-                    self.advance_by(advance);
-                    return Some(Ok(token));
-                }
-                '<' => {
-                    let (token, advance) =
-                        token_from_pairs(vec![('=', Token::LessEqual)], Token::Less);
-                    self.advance_by(advance);
-                    return Some(Ok(token));
-                }
-                '>' => {
-                    let (token, advance) =
-                        token_from_pairs(vec![('=', Token::GreaterEqual)], Token::Greater);
-                    self.advance_by(advance);
-                    return Some(Ok(token));
-                }
-                '-' => match chars.peek() {
-                    Some(c) if c.is_numeric() => return Some(self.lex_numerals()),
-                    Some('=') => {
-                        self.source = &self.source[c.len_utf8() + 1..];
-                        self.pos += 2;
-                        return Some(Ok(Token::MinusAssign));
-                    }
-                    _ => return simple_token(Token::Minus),
-                },
-                _ => {
-                    let next_whitespace = self
-                        .source
-                        .find(|c| !matches!(c, 'a'..='z' | 'A'..='Z' | '_' | '0'..='9'))
-                        .unwrap_or(self.source.len());
-
-                    let identifier = &self.source[..next_whitespace];
-
-                    self.advance_by(next_whitespace);
-
-                    return Some(Ok(Token::identifier_from(identifier)));
-                }
-            };
-        }
     }
 }
 

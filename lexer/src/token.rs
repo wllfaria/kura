@@ -1,39 +1,85 @@
+use core::fmt;
+use miette::Error;
+
 #[derive(Debug)]
-pub enum NumSize {
+pub enum FloatSizes {
     F8,
     F16,
     F32,
     F64,
+}
+
+impl fmt::Display for FloatSizes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FloatSizes::F8 => write!(f, "f8"),
+            FloatSizes::F16 => write!(f, "f16"),
+            FloatSizes::F32 => write!(f, "f32"),
+            FloatSizes::F64 => write!(f, "f64"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum SignedIntSizes {
     I8,
     I16,
     I32,
     I64,
+    Isize,
+}
+
+impl fmt::Display for SignedIntSizes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SignedIntSizes::I8 => write!(f, "i8"),
+            SignedIntSizes::I16 => write!(f, "i16"),
+            SignedIntSizes::I32 => write!(f, "i32"),
+            SignedIntSizes::I64 => write!(f, "i64"),
+            SignedIntSizes::Isize => write!(f, "isize"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum UnsignedIntSizes {
     U8,
     U16,
     U32,
     U64,
     Usize,
-    Isize,
+}
+
+impl fmt::Display for UnsignedIntSizes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            UnsignedIntSizes::U8 => write!(f, "u8"),
+            UnsignedIntSizes::U16 => write!(f, "u16"),
+            UnsignedIntSizes::U32 => write!(f, "u32"),
+            UnsignedIntSizes::U64 => write!(f, "u64"),
+            UnsignedIntSizes::Usize => write!(f, "usize"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum NumSize {
+    Float(FloatSizes),
+    SignedInt(SignedIntSizes),
+    UnsignedInt(UnsignedIntSizes),
 }
 
 impl std::fmt::Display for NumSize {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            NumSize::F8 => write!(f, "f8"),
-            NumSize::F16 => write!(f, "f16"),
-            NumSize::F32 => write!(f, "f32"),
-            NumSize::F64 => write!(f, "f64"),
-            NumSize::I8 => write!(f, "i8"),
-            NumSize::I16 => write!(f, "i16"),
-            NumSize::I32 => write!(f, "i32"),
-            NumSize::I64 => write!(f, "i64"),
-            NumSize::U8 => write!(f, "u8"),
-            NumSize::U16 => write!(f, "u16"),
-            NumSize::U32 => write!(f, "u32"),
-            NumSize::U64 => write!(f, "u64"),
-            NumSize::Usize => write!(f, "usize"),
-            NumSize::Isize => write!(f, "isize"),
-        }
+        write!(
+            f,
+            "{}",
+            match self {
+                NumSize::Float(size) => size.to_string(),
+                NumSize::SignedInt(size) => size.to_string(),
+                NumSize::UnsignedInt(size) => size.to_string(),
+            }
+        )
     }
 }
 
@@ -42,20 +88,20 @@ impl TryFrom<&str> for NumSize {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "i8" => Ok(NumSize::I8),
-            "i16" => Ok(NumSize::I16),
-            "i32" => Ok(NumSize::I32),
-            "i64" => Ok(NumSize::I64),
-            "u8" => Ok(NumSize::U8),
-            "u16" => Ok(NumSize::U16),
-            "u32" => Ok(NumSize::U32),
-            "u64" => Ok(NumSize::U64),
-            "f8" => Ok(NumSize::F8),
-            "f16" => Ok(NumSize::F16),
-            "f32" => Ok(NumSize::F32),
-            "f64" => Ok(NumSize::F64),
-            "usize" => Ok(NumSize::Usize),
-            "isize" => Ok(NumSize::Isize),
+            "i8" => Ok(NumSize::SignedInt(SignedIntSizes::I8)),
+            "i16" => Ok(NumSize::SignedInt(SignedIntSizes::I16)),
+            "i32" => Ok(NumSize::SignedInt(SignedIntSizes::I32)),
+            "i64" => Ok(NumSize::SignedInt(SignedIntSizes::I64)),
+            "isize" => Ok(NumSize::SignedInt(SignedIntSizes::Isize)),
+            "u8" => Ok(NumSize::UnsignedInt(UnsignedIntSizes::U8)),
+            "u16" => Ok(NumSize::UnsignedInt(UnsignedIntSizes::U16)),
+            "u32" => Ok(NumSize::UnsignedInt(UnsignedIntSizes::U32)),
+            "u64" => Ok(NumSize::UnsignedInt(UnsignedIntSizes::U64)),
+            "usize" => Ok(NumSize::UnsignedInt(UnsignedIntSizes::Usize)),
+            "f8" => Ok(NumSize::Float(FloatSizes::F8)),
+            "f16" => Ok(NumSize::Float(FloatSizes::F16)),
+            "f32" => Ok(NumSize::Float(FloatSizes::F32)),
+            "f64" => Ok(NumSize::Float(FloatSizes::F64)),
             _ => Err(()),
         }
     }
@@ -105,6 +151,32 @@ pub enum Token<'tok> {
     Enum,
     Return,
     Ident(&'tok str),
+    Eof,
+}
+
+impl Token<'_> {
+    pub fn is_binary_op(&self) -> bool {
+        matches!(
+            self,
+            Token::Star
+                | Token::Slash
+                | Token::Plus
+                | Token::Minus
+                | Token::Greater
+                | Token::Less
+                | Token::LessEqual
+                | Token::GreaterEqual
+        )
+    }
+
+    pub fn infix_precedence(&self) -> Result<(u8, u8), Error> {
+        match self {
+            Token::Plus | Token::Minus => Ok((1, 2)),
+            Token::Less | Token::LessEqual | Token::Greater | Token::GreaterEqual => Ok((3, 4)),
+            Token::Star | Token::Slash => Ok((5, 6)),
+            _ => miette::bail!("invalid operator with no precedence"),
+        }
+    }
 }
 
 impl std::fmt::Display for Token<'_> {
@@ -167,6 +239,7 @@ impl std::fmt::Display for Token<'_> {
             Token::Struct => write!(f, "struct"),
             Token::Enum => write!(f, "enum"),
             Token::Ident(str) => write!(f, "{str}"),
+            Token::Eof => write!(f, "EOF"),
         }
     }
 }
