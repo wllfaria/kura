@@ -9,23 +9,23 @@ expression: result
             operator: Sub,
             lhs: BinaryOp {
                 operator: Add,
-                lhs: IntegerLiteral {
+                lhs: UintLiteral {
                     value: 1,
                     size: None,
                 },
                 rhs: BinaryOp {
                     operator: Mul,
-                    lhs: IntegerLiteral {
+                    lhs: UintLiteral {
                         value: 2,
                         size: None,
                     },
-                    rhs: IntegerLiteral {
+                    rhs: UintLiteral {
                         value: 3,
                         size: None,
                     },
                 },
             },
-            rhs: IntegerLiteral {
+            rhs: UintLiteral {
                 value: 4,
                 size: None,
             },

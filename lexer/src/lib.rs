@@ -2,7 +2,7 @@ use miette::{Error, LabeledSpan};
 
 mod token;
 
-pub use token::{FloatSizes, NumSize, SignedIntSizes, Token, UnsignedIntSizes};
+pub use token::{FloatSizes, IntoToken,Token, *};
 
 pub struct Lexer<'lex> {
     pos: usize,
@@ -35,6 +35,15 @@ impl<'lex> Lexer<'lex> {
     pub fn is_empty(&mut self) -> bool {
         self.peek().is_none()
     }
+
+    fn make_token<T>(&mut self, tokenizable: T, size: usize) -> Token<'lex>
+    where
+        T: IntoToken<'lex>,
+    {
+        let start_byte = self.pos;
+        self.advance_by(size);
+        tokenizable.into_token(start_byte, self.pos)
+    }
 }
 
 impl<'lex> Iterator for Lexer<'lex> {
@@ -51,11 +60,6 @@ impl<'lex> Iterator for Lexer<'lex> {
 
             let next = chars.peek().copied();
 
-            let mut make_token = |token: Token<'lex>, size: u8| {
-                self.advance_by(size.into());
-                Some(Ok(token))
-            };
-
             break match (c, next) {
                 (c, _) if c.is_whitespace() => {
                     self.advance_by(c.len_utf8());
@@ -64,43 +68,44 @@ impl<'lex> Iterator for Lexer<'lex> {
                 // ----------------------------------------------------
                 // DOUBLE TOKENS
                 // ----------------------------------------------------
-                ('+', Some('=')) => make_token(Token::AddAssign, 2),
-                ('=', Some('=')) => make_token(Token::EqualEqual, 2),
-                ('=', Some('>')) => make_token(Token::ThickArrow, 2),
-                ('*', Some('=')) => make_token(Token::MultiplyAssign, 2),
-                ('/', Some('=')) => make_token(Token::DivideAssign, 2),
-                ('!', Some('=')) => make_token(Token::NotEqual, 2),
-                ('<', Some('=')) => make_token(Token::LessEqual, 2),
-                ('>', Some('=')) => make_token(Token::GreaterEqual, 2),
-                ('-', Some('=')) => make_token(Token::MinusAssign, 2),
+                ('+', Some('=')) => Some(Ok(self.make_token(Operator::AddAssign, 2))),
+                ('=', Some('=')) => Some(Ok(self.make_token(Operator::EqualEqual, 2))),
+                ('=', Some('>')) => Some(Ok(self.make_token(Operator::ThickArrow, 2))),
+                ('*', Some('=')) => Some(Ok(self.make_token(Operator::MultiplyAssign, 2))),
+                ('/', Some('=')) => Some(Ok(self.make_token(Operator::DivideAssign, 2))),
+                ('!', Some('=')) => Some(Ok(self.make_token(Operator::NotEqual, 2))),
+                ('<', Some('=')) => Some(Ok(self.make_token(Operator::LessEqual, 2))),
+                ('>', Some('=')) => Some(Ok(self.make_token(Operator::GreaterEqual, 2))),
+                ('-', Some('=')) => Some(Ok(self.make_token(Operator::MinusAssign, 2))),
+                ('&', Some('&')) => Some(Ok(self.make_token(Operator::And, 2))),
                 ('-', Some(c)) if c.is_numeric() => Some(self.lex_numerals()),
 
                 // ----------------------------------------------------
                 // SINGLE TOKENS
                 // ----------------------------------------------------
-                ('(', _) => make_token(Token::LeftParen, 1),
-                (')', _) => make_token(Token::RightParen, 1),
-                ('[', _) => make_token(Token::LeftBracket, 1),
-                (']', _) => make_token(Token::RightBracket, 1),
-                ('{', _) => make_token(Token::LeftBrace, 1),
-                ('}', _) => make_token(Token::RightBrace, 1),
-                (':', _) => make_token(Token::Colon, 1),
-                (';', _) => make_token(Token::SemiColon, 1),
-                (',', _) => make_token(Token::Comma, 1),
-                ('.', _) => make_token(Token::Dot, 1),
-                ('+', _) => make_token(Token::Plus, 1),
-                ('=', _) => make_token(Token::Equal, 1),
-                ('*', _) => make_token(Token::Star, 1),
-                ('&', _) => make_token(Token::Ampersand, 1),
-                ('/', _) => make_token(Token::Slash, 1),
-                ('!', _) => make_token(Token::Bang, 1),
-                ('<', _) => make_token(Token::Less, 1),
-                ('>', _) => make_token(Token::Greater, 1),
-                ('-', _) => make_token(Token::Minus, 1),
+                ('(', _) => Some(Ok(self.make_token(Operator::LeftParen, 1))),
+                (')', _) => Some(Ok(self.make_token(Operator::RightParen, 1))),
+                ('[', _) => Some(Ok(self.make_token(Operator::LeftBracket, 1))),
+                (']', _) => Some(Ok(self.make_token(Operator::RightBracket, 1))),
+                ('{', _) => Some(Ok(self.make_token(Operator::LeftBrace, 1))),
+                ('}', _) => Some(Ok(self.make_token(Operator::RightBrace, 1))),
+                (':', _) => Some(Ok(self.make_token(Operator::Colon, 1))),
+                (';', _) => Some(Ok(self.make_token(Operator::SemiColon, 1))),
+                (',', _) => Some(Ok(self.make_token(Operator::Comma, 1))),
+                ('.', _) => Some(Ok(self.make_token(Operator::Dot, 1))),
+                ('+', _) => Some(Ok(self.make_token(Operator::Plus, 1))),
+                ('=', _) => Some(Ok(self.make_token(Operator::Equal, 1))),
+                ('*', _) => Some(Ok(self.make_token(Operator::Star, 1))),
+                ('&', _) => Some(Ok(self.make_token(Operator::Ampersand, 1))),
+                ('/', _) => Some(Ok(self.make_token(Operator::Slash, 1))),
+                ('!', _) => Some(Ok(self.make_token(Operator::Bang, 1))),
+                ('<', _) => Some(Ok(self.make_token(Operator::Less, 1))),
+                ('>', _) => Some(Ok(self.make_token(Operator::Greater, 1))),
+                ('-', _) => Some(Ok(self.make_token(Operator::Minus, 1))),
 
                 ('a'..='z' | 'A'..='Z' | '_', _) => Some(Ok(self.lex_identifier())),
                 ('0'..='9', _) => Some(self.lex_numerals()),
-                _ => Some(Ok(Token::Eof)),
+                _ => Some(Ok(Kind::Eof.into_token(self.pos, self.pos))),
             };
         }
     }
@@ -115,12 +120,11 @@ impl<'lex> Lexer<'lex> {
 
         let identifier = &self.source[..next_whitespace];
 
-        self.advance_by(next_whitespace);
-
-        Token::identifier_from(identifier)
+        self.make_token(Kind::identifier_from(identifier), next_whitespace)
     }
 
     fn lex_numerals(&mut self) -> Result<Token<'lex>, Error> {
+        let start_byte = self.pos;
         let end_of_numeral = self
             .source
             .find(|c| !matches!(c, '-' | '_' | '.' | '0'..='9'))
@@ -189,56 +193,61 @@ impl<'lex> Lexer<'lex> {
             postfix = postfix.trim_matches(';');
         }
 
-        let size = match NumSize::try_from(postfix) {
-            Ok(size) => Some(size),
-            Err(_) => None,
+        let is_signed = literal.contains('-');
+        let is_float = literal.contains('.');
+        let token = match (is_float, is_signed) {
+            (false, true) => 
+                Primitive::Int {
+                value: match literal.parse() {
+                    Ok(numeral) => numeral,
+                    Err(e) => return Err(miette::miette! {
+                        labels = vec![
+                            LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
+                        ],
+                        "{e}",
+                    }.with_source_code(self.complete_source.to_string())),
+                },
+                size: IntSizes::try_from(postfix).ok()
+            },
+            (false, false) => Primitive::UInt {
+                value: match literal.parse() {
+                    Ok(numeral) => numeral,
+                    Err(e) => return Err(miette::miette! {
+                        labels = vec![
+                            LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
+                        ],
+                        "{e}",
+                    }.with_source_code(self.complete_source.to_string())),
+                },
+                size: UIntSizes::try_from(postfix).ok()
+            },
+            (true, _) => Primitive::Float {
+                value: match literal.parse() {
+                    Ok(numeral) => numeral,
+                    Err(e) => return Err(miette::miette! {
+                        labels = vec![
+                            LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
+                        ],
+                        "{e}",
+                    }.with_source_code(self.complete_source.to_string())),
+                },
+                size: FloatSizes::try_from(postfix).ok()
+            },
         };
 
-        if size.is_some() {
+        let has_size = match &token {
+            Primitive::Int { size, .. } => size.is_some(),
+            Primitive::UInt { size, .. } => size.is_some(),
+            Primitive::Float { size, .. } => size.is_some(),
+            _ => unreachable!(),
+        };
+
+        if has_size {
             self.source = &self.source[postfix.len()..];
             self.pos += postfix.len();
         }
 
-        let is_signed = literal.contains('-');
-        let is_float = literal.contains('.');
-        match (is_float, is_signed) {
-            (false, true) => Ok(Token::SignedInteger {
-                value: match literal.parse() {
-                    Ok(numeral) => numeral,
-                    Err(e) => return Err(miette::miette! {
-                        labels = vec![
-                            LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
-                        ],
-                        "{e}",
-                    }.with_source_code(self.complete_source.to_string())),
-                },
-                size,
-            }),
-            (false, false) => Ok(Token::Integer {
-                value: match literal.parse() {
-                    Ok(numeral) => numeral,
-                    Err(e) => return Err(miette::miette! {
-                        labels = vec![
-                            LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
-                        ],
-                        "{e}",
-                    }.with_source_code(self.complete_source.to_string())),
-                },
-                size,
-            }),
-            (true, _) => Ok(Token::Float {
-                value: match literal.parse() {
-                    Ok(numeral) => numeral,
-                    Err(e) => return Err(miette::miette! {
-                        labels = vec![
-                            LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
-                        ],
-                        "{e}",
-                    }.with_source_code(self.complete_source.to_string())),
-                },
-                size,
-            }),
-        }
+        Ok(token.into_token(start_byte, self.pos))
     }
 
     fn advance_by(&mut self, amount: usize) {

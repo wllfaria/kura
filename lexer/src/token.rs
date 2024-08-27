@@ -21,7 +21,7 @@ impl fmt::Display for FloatSizes {
 }
 
 #[derive(Debug)]
-pub enum SignedIntSizes {
+pub enum IntSizes {
     I8,
     I16,
     I32,
@@ -29,20 +29,20 @@ pub enum SignedIntSizes {
     Isize,
 }
 
-impl fmt::Display for SignedIntSizes {
+impl fmt::Display for IntSizes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SignedIntSizes::I8 => write!(f, "i8"),
-            SignedIntSizes::I16 => write!(f, "i16"),
-            SignedIntSizes::I32 => write!(f, "i32"),
-            SignedIntSizes::I64 => write!(f, "i64"),
-            SignedIntSizes::Isize => write!(f, "isize"),
+            IntSizes::I8 => write!(f, "i8"),
+            IntSizes::I16 => write!(f, "i16"),
+            IntSizes::I32 => write!(f, "i32"),
+            IntSizes::I64 => write!(f, "i64"),
+            IntSizes::Isize => write!(f, "isize"),
         }
     }
 }
 
 #[derive(Debug)]
-pub enum UnsignedIntSizes {
+pub enum UIntSizes {
     U8,
     U16,
     U32,
@@ -50,71 +50,135 @@ pub enum UnsignedIntSizes {
     Usize,
 }
 
-impl fmt::Display for UnsignedIntSizes {
+impl fmt::Display for UIntSizes {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            UnsignedIntSizes::U8 => write!(f, "u8"),
-            UnsignedIntSizes::U16 => write!(f, "u16"),
-            UnsignedIntSizes::U32 => write!(f, "u32"),
-            UnsignedIntSizes::U64 => write!(f, "u64"),
-            UnsignedIntSizes::Usize => write!(f, "usize"),
+            UIntSizes::U8 => write!(f, "u8"),
+            UIntSizes::U16 => write!(f, "u16"),
+            UIntSizes::U32 => write!(f, "u32"),
+            UIntSizes::U64 => write!(f, "u64"),
+            UIntSizes::Usize => write!(f, "usize"),
         }
     }
 }
 
-#[derive(Debug)]
-pub enum NumSize {
-    Float(FloatSizes),
-    SignedInt(SignedIntSizes),
-    UnsignedInt(UnsignedIntSizes),
-}
-
-impl std::fmt::Display for NumSize {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                NumSize::Float(size) => size.to_string(),
-                NumSize::SignedInt(size) => size.to_string(),
-                NumSize::UnsignedInt(size) => size.to_string(),
-            }
-        )
-    }
-}
-
-impl TryFrom<&str> for NumSize {
+impl TryFrom<&str> for IntSizes {
     type Error = ();
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "i8" => Ok(NumSize::SignedInt(SignedIntSizes::I8)),
-            "i16" => Ok(NumSize::SignedInt(SignedIntSizes::I16)),
-            "i32" => Ok(NumSize::SignedInt(SignedIntSizes::I32)),
-            "i64" => Ok(NumSize::SignedInt(SignedIntSizes::I64)),
-            "isize" => Ok(NumSize::SignedInt(SignedIntSizes::Isize)),
-            "u8" => Ok(NumSize::UnsignedInt(UnsignedIntSizes::U8)),
-            "u16" => Ok(NumSize::UnsignedInt(UnsignedIntSizes::U16)),
-            "u32" => Ok(NumSize::UnsignedInt(UnsignedIntSizes::U32)),
-            "u64" => Ok(NumSize::UnsignedInt(UnsignedIntSizes::U64)),
-            "usize" => Ok(NumSize::UnsignedInt(UnsignedIntSizes::Usize)),
-            "f8" => Ok(NumSize::Float(FloatSizes::F8)),
-            "f16" => Ok(NumSize::Float(FloatSizes::F16)),
-            "f32" => Ok(NumSize::Float(FloatSizes::F32)),
-            "f64" => Ok(NumSize::Float(FloatSizes::F64)),
+            "i8" => Ok(IntSizes::I8),
+            "i16" => Ok(IntSizes::I16),
+            "i32" => Ok(IntSizes::I32),
+            "i64" => Ok(IntSizes::I64),
+            "isize" => Ok(IntSizes::Isize),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<&str> for FloatSizes {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "f8" => Ok(FloatSizes::F8),
+            "f16" => Ok(FloatSizes::F16),
+            "f32" => Ok(FloatSizes::F32),
+            "f64" => Ok(FloatSizes::F64),
+            _ => Err(()),
+        }
+    }
+}
+
+impl TryFrom<&str> for UIntSizes {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "u8" => Ok(UIntSizes::U8),
+            "u16" => Ok(UIntSizes::U16),
+            "u32" => Ok(UIntSizes::U32),
+            "u64" => Ok(UIntSizes::U64),
+            "usize" => Ok(UIntSizes::Usize),
             _ => Err(()),
         }
     }
 }
 
 #[derive(Debug)]
-pub enum Token<'tok> {
-    Integer { value: u64, size: Option<NumSize> },
-    SignedInteger { value: i64, size: Option<NumSize> },
-    Float { value: f64, size: Option<NumSize> },
+pub enum Primitive {
+    Bool(bool),
+    UInt {
+        value: u64,
+        size: Option<UIntSizes>,
+    },
+    Int {
+        value: i64,
+        size: Option<IntSizes>,
+    },
+    Float {
+        value: f64,
+        size: Option<FloatSizes>,
+    },
+}
+
+impl fmt::Display for Primitive {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Primitive::Bool(b) => write!(f, "{b}"),
+            Primitive::UInt { value, size } => write!(
+                f,
+                "{}{}",
+                value,
+                size.as_ref().map(|s| s.to_string()).unwrap_or_default()
+            ),
+            Primitive::Float { value, size } => write!(
+                f,
+                "{}{}",
+                value,
+                size.as_ref().map(|s| s.to_string()).unwrap_or_default()
+            ),
+            Primitive::Int { value, size } => write!(
+                f,
+                "{}{}",
+                value,
+                size.as_ref().map(|s| s.to_string()).unwrap_or_default()
+            ),
+        }
+    }
+}
+
+impl<'tok> IntoToken<'tok> for Primitive {
+    fn into_token(self, start_byte: usize, end_byte: usize) -> Token<'tok> {
+        Token::new(
+            Kind::Value(Value::Primitive(self)),
+            (start_byte, end_byte).into(),
+        )
+    }
+}
+
+#[derive(Debug)]
+pub enum Value<'tok> {
+    Primitive(Primitive),
+    Ident(&'tok str),
+    String(&'tok str),
+}
+
+impl fmt::Display for Value<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::Primitive(p) => write!(f, "{}", p),
+            Value::Ident(i) => write!(f, "{i}"),
+            Value::String(s) => write!(f, "{s}"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Operator {
     Minus,
     MinusAssign,
-    String(&'tok str),
     LeftParen,
     RightParen,
     LeftBracket,
@@ -141,6 +205,62 @@ pub enum Token<'tok> {
     Greater,
     GreaterEqual,
     NotEqual,
+    And,
+    Or,
+}
+
+impl fmt::Display for Operator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Operator::Minus => write!(f, "-"),
+            Operator::MinusAssign => write!(f, "-="),
+            Operator::Colon => write!(f, ":"),
+            Operator::SemiColon => write!(f, ";"),
+            Operator::LeftParen => write!(f, "("),
+            Operator::RightParen => write!(f, ")"),
+            Operator::LeftBracket => write!(f, "["),
+            Operator::RightBracket => write!(f, "]"),
+            Operator::LeftBrace => write!(f, "{{"),
+            Operator::RightBrace => write!(f, "}}"),
+            Operator::Comma => write!(f, ","),
+            Operator::Dot => write!(f, "."),
+            Operator::Plus => write!(f, "+"),
+            Operator::AddAssign => write!(f, "+="),
+            Operator::Equal => write!(f, "="),
+            Operator::ThickArrow => write!(f, "=>"),
+            Operator::EqualEqual => write!(f, "=="),
+            Operator::Star => write!(f, "*"),
+            Operator::MultiplyAssign => write!(f, "*="),
+            Operator::Ampersand => write!(f, "&"),
+            Operator::Slash => write!(f, "/"),
+            Operator::Bang => write!(f, "!"),
+            Operator::Less => write!(f, "<"),
+            Operator::LessEqual => write!(f, "<="),
+            Operator::Greater => write!(f, ">"),
+            Operator::GreaterEqual => write!(f, ">="),
+            Operator::NotEqual => write!(f, "!="),
+            Operator::DivideAssign => write!(f, "/="),
+            Operator::And => write!(f, "&&"),
+            Operator::Or => write!(f, "||"),
+        }
+    }
+}
+
+pub trait IntoToken<'tok> {
+    fn into_token(self, start_byte: usize, end_byte: usize) -> Token<'tok>;
+}
+
+impl<'tok> IntoToken<'tok> for Operator {
+    fn into_token(self, start_byte: usize, end_byte: usize) -> Token<'tok> {
+        Token::new(Kind::Op(self), (start_byte, end_byte).into())
+    }
+}
+
+#[derive(Debug)]
+pub enum Kind<'tok> {
+    Value(Value<'tok>),
+    Op(Operator),
+
     Var,
     Const,
     Match,
@@ -150,113 +270,126 @@ pub enum Token<'tok> {
     Struct,
     Enum,
     Return,
-    Ident(&'tok str),
     Eof,
 }
 
-impl Token<'_> {
+impl<'tok> Kind<'tok> {
+    pub fn infix_precedence(&self) -> Result<(u8, u8), Error> {
+        match self {
+            Kind::Op(Operator::Plus) | Kind::Op(Operator::Minus) => Ok((1, 2)),
+            Kind::Op(Operator::Less)
+            | Kind::Op(Operator::LessEqual)
+            | Kind::Op(Operator::Greater)
+            | Kind::Op(Operator::GreaterEqual) => Ok((3, 4)),
+            Kind::Op(Operator::Star) | Kind::Op(Operator::Slash) => Ok((5, 6)),
+            _ => miette::bail!("invalid operator with no precedence"),
+        }
+    }
+
     pub fn is_binary_op(&self) -> bool {
         matches!(
             self,
-            Token::Star
-                | Token::Slash
-                | Token::Plus
-                | Token::Minus
-                | Token::Greater
-                | Token::Less
-                | Token::LessEqual
-                | Token::GreaterEqual
+            Kind::Op(Operator::Star)
+                | Kind::Op(Operator::Slash)
+                | Kind::Op(Operator::Plus)
+                | Kind::Op(Operator::Minus)
+                | Kind::Op(Operator::Greater)
+                | Kind::Op(Operator::Less)
+                | Kind::Op(Operator::LessEqual)
+                | Kind::Op(Operator::GreaterEqual)
         )
     }
 
-    pub fn infix_precedence(&self) -> Result<(u8, u8), Error> {
-        match self {
-            Token::Plus | Token::Minus => Ok((1, 2)),
-            Token::Less | Token::LessEqual | Token::Greater | Token::GreaterEqual => Ok((3, 4)),
-            Token::Star | Token::Slash => Ok((5, 6)),
-            _ => miette::bail!("invalid operator with no precedence"),
+    pub fn identifier_from(value: &'tok str) -> Kind<'tok> {
+        match value {
+            "var" => Kind::Var,
+            "const" => Kind::Const,
+            "match" => Kind::Match,
+            "if" => Kind::If,
+            "else" => Kind::Else,
+            "fun" => Kind::Fun,
+            "struct" => Kind::Struct,
+            "enum" => Kind::Enum,
+            "return" => Kind::Return,
+            _ => Kind::Value(Value::Ident(value)),
         }
+    }
+}
+
+impl<'tok> IntoToken<'tok> for Kind<'tok> {
+    fn into_token(self, start_byte: usize, end_byte: usize) -> Token<'tok> {
+        Token::new(self, (start_byte, end_byte).into())
+    }
+}
+
+#[derive(Debug)]
+pub struct Location {
+    start_byte: usize,
+    end_byte: usize,
+}
+
+impl From<(usize, usize)> for Location {
+    fn from((start_byte, end_byte): (usize, usize)) -> Self {
+        Self {
+            start_byte,
+            end_byte,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Token<'tok> {
+    pub kind: Kind<'tok>,
+    pub location: Location,
+}
+
+impl<'tok> Token<'tok> {
+    pub fn new(kind: Kind<'tok>, location: Location) -> Self {
+        Self { kind, location }
     }
 }
 
 impl std::fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Token::Integer { value, size } => write!(
-                f,
-                "{}{}",
-                value,
-                size.as_ref().map(|s| s.to_string()).unwrap_or_default()
-            ),
-            Token::Float { value, size } => write!(
-                f,
-                "{}{}",
-                value,
-                size.as_ref().map(|s| s.to_string()).unwrap_or_default()
-            ),
-            Token::SignedInteger { value, size } => write!(
-                f,
-                "{}{}",
-                value,
-                size.as_ref().map(|s| s.to_string()).unwrap_or_default()
-            ),
-            Token::Minus => write!(f, "-"),
-            Token::MinusAssign => write!(f, "-="),
-            Token::Colon => write!(f, ":"),
-            Token::SemiColon => write!(f, ";"),
-            Token::String(s) => write!(f, "{s}"),
-            Token::LeftParen => write!(f, "("),
-            Token::RightParen => write!(f, ")"),
-            Token::LeftBracket => write!(f, "["),
-            Token::RightBracket => write!(f, "]"),
-            Token::LeftBrace => write!(f, "{{"),
-            Token::RightBrace => write!(f, "}}"),
-            Token::Comma => write!(f, ","),
-            Token::Dot => write!(f, "."),
-            Token::Plus => write!(f, "+"),
-            Token::AddAssign => write!(f, "+="),
-            Token::Equal => write!(f, "="),
-            Token::ThickArrow => write!(f, "=>"),
-            Token::EqualEqual => write!(f, "=="),
-            Token::Star => write!(f, "*"),
-            Token::MultiplyAssign => write!(f, "*="),
-            Token::Ampersand => write!(f, "&"),
-            Token::Slash => write!(f, "/"),
-            Token::Bang => write!(f, "!"),
-            Token::Less => write!(f, "<"),
-            Token::LessEqual => write!(f, "<="),
-            Token::Greater => write!(f, ">"),
-            Token::GreaterEqual => write!(f, ">="),
-            Token::NotEqual => write!(f, "!="),
-            Token::DivideAssign => write!(f, "/="),
-            Token::Var => write!(f, "var"),
-            Token::Const => write!(f, "const"),
-            Token::Match => write!(f, "match"),
-            Token::If => write!(f, "if"),
-            Token::Else => write!(f, "else"),
-            Token::Return => write!(f, "return"),
-            Token::Fun => write!(f, "fun"),
-            Token::Struct => write!(f, "struct"),
-            Token::Enum => write!(f, "enum"),
-            Token::Ident(str) => write!(f, "{str}"),
-            Token::Eof => write!(f, "EOF"),
+        match &self.kind {
+            Kind::Value(val) => write!(f, "{}", val),
+            Kind::Op(op) => write!(f, "{}", op),
+            Kind::Var => write!(f, ""),
+            Kind::Const => write!(f, ""),
+            Kind::Match => write!(f, ""),
+            Kind::If => write!(f, ""),
+            Kind::Else => write!(f, ""),
+            Kind::Fun => write!(f, ""),
+            Kind::Struct => write!(f, ""),
+            Kind::Enum => write!(f, ""),
+            Kind::Return => write!(f, ""),
+            Kind::Eof => write!(f, ""),
         }
-    }
-}
 
-impl<'tok> Token<'tok> {
-    pub fn identifier_from(value: &'tok str) -> Token<'tok> {
-        match value {
-            "var" => Token::Var,
-            "const" => Token::Const,
-            "match" => Token::Match,
-            "if" => Token::If,
-            "else" => Token::Else,
-            "fun" => Token::Fun,
-            "struct" => Token::Struct,
-            "enum" => Token::Enum,
-            "return" => Token::Return,
-            _ => Token::Ident(value),
-        }
+        //match self {
+        //    Token_::Integer { value, size } => write!(
+        //        f,
+        //        "{}{}",
+        //        value,
+        //        size.as_ref().map(|s| s.to_string()).unwrap_or_default()
+        //    ),
+        //    Token_::Float { value, size } => write!(
+        //        f,
+        //        "{}{}",
+        //        value,
+        //        size.as_ref().map(|s| s.to_string()).unwrap_or_default()
+        //    ),
+        //    Token_::SignedInteger { value, size } => write!(
+        //        f,
+        //        "{}{}",
+        //        value,
+        //        size.as_ref().map(|s| s.to_string()).unwrap_or_default()
+        //    ),
+        //    Token_::Return => write!(f, "return"),
+        //    Token_::Fun => write!(f, "fun"),
+        //    Token_::Struct => write!(f, "struct"),
+        //    Token_::Enum => write!(f, "enum"),
+        //    Token_::Ident(str) => write!(f, "{str}"),
+        //}
     }
 }

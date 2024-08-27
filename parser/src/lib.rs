@@ -1,4 +1,4 @@
-use lexer::{FloatSizes, Lexer, SignedIntSizes, Token};
+use lexer::{FloatSizes, IntSizes, Kind, Lexer, Operator, Primitive, Token, UIntSizes, Value};
 
 use miette::{Error, LabeledSpan};
 
@@ -14,11 +14,11 @@ impl TryFrom<&Token<'_>> for BinaryOperator {
     type Error = Error;
 
     fn try_from(token: &Token) -> Result<Self, Self::Error> {
-        match token {
-            Token::Plus => Ok(BinaryOperator::Add),
-            Token::Minus => Ok(BinaryOperator::Sub),
-            Token::Star => Ok(BinaryOperator::Mul),
-            Token::Slash => Ok(BinaryOperator::Div),
+        match token.kind {
+            Kind::Op(Operator::Plus) => Ok(BinaryOperator::Add),
+            Kind::Op(Operator::Minus) => Ok(BinaryOperator::Sub),
+            Kind::Op(Operator::Star) => Ok(BinaryOperator::Mul),
+            Kind::Op(Operator::Slash) => Ok(BinaryOperator::Div),
             _ => miette::bail!("invalid binary operator"),
         }
     }
@@ -30,17 +30,17 @@ pub enum Expression<'ast> {
         name: &'ast str,
         value: Box<Expression<'ast>>,
     },
-    IntegerLiteral {
+    UintLiteral {
         value: u64,
-        size: Option<SignedIntSizes>,
+        size: Option<UIntSizes>,
     },
     FloatLiteral {
         value: f64,
         size: Option<FloatSizes>,
     },
-    SignedIntegerLiteral {
+    IntLiteral {
         value: i64,
-        size: Option<SignedIntSizes>,
+        size: Option<IntSizes>,
     },
     BinaryOp {
         operator: BinaryOperator,
@@ -84,7 +84,7 @@ impl<'par> Parser<'par> {
     pub fn peek_for_binary_operator(&mut self) -> Result<Option<&Token<'par>>, Error> {
         match self.lexer.peek() {
             Some(result) => match result {
-                Ok(token) if token.is_binary_op() => Ok(Some(token)),
+                Ok(token) if token.kind.is_binary_op() => Ok(Some(token)),
                 Ok(_) => Ok(None),
                 Err(_) => Ok(None),
             },
@@ -100,7 +100,7 @@ impl<'par> Parser<'par> {
         let mut lhs = self.parse_base_expression()?;
 
         while let Some(op) = self.peek_for_binary_operator()? {
-            let (lhs_precedence, rhs_precedence) = op.infix_precedence()?;
+            let (lhs_precedence, rhs_precedence) = op.kind.infix_precedence()?;
             if lhs_precedence < min_precedence {
                 break;
             }
@@ -122,27 +122,40 @@ impl<'par> Parser<'par> {
 
     pub fn parse_base_expression(&mut self) -> Result<Expression<'par>, Error> {
         match self.lexer.next().transpose()? {
-            Some(Token::Float { value, .. }) => Ok(Expression::FloatLiteral { value, size: None }),
-            Some(Token::Integer { value, .. }) => {
-                Ok(Expression::IntegerLiteral { value, size: None })
-            }
-            Some(Token::SignedInteger { value, .. }) => {
-                Ok(Expression::SignedIntegerLiteral { value, size: None })
-            }
+            Some(Token {
+                kind: Kind::Value(Value::Primitive(Primitive::Float { value, .. })),
+                ..
+            }) => Ok(Expression::FloatLiteral { value, size: None }),
+            Some(Token {
+                kind: Kind::Value(Value::Primitive(Primitive::Int { value, .. })),
+                ..
+            }) => Ok(Expression::IntLiteral { value, size: None }),
+            Some(Token {
+                kind: Kind::Value(Value::Primitive(Primitive::UInt { value, .. })),
+                ..
+            }) => Ok(Expression::UintLiteral { value, size: None }),
             _ => todo!(),
         }
     }
 
     pub fn parse_statement(&mut self) -> Result<Expression<'par>, Error> {
-        let token = self.lexer.next().transpose()?.expect("");
-        match token {
-            Token::Var => self.parse_variable(),
-            Token::Float { value, .. } => Ok(Expression::FloatLiteral { value, size: None }),
-            Token::Integer { value, .. } => Ok(Expression::IntegerLiteral { value, size: None }),
-            Token::SignedInteger { value, .. } => {
-                Ok(Expression::SignedIntegerLiteral { value, size: None })
-            }
-            t => panic!("{t:?}"),
+        match self.lexer.next().transpose()? {
+            Some(Token {
+                kind: Kind::Value(Value::Primitive(Primitive::Float { value, .. })),
+                ..
+            }) => Ok(Expression::FloatLiteral { value, size: None }),
+            Some(Token {
+                kind: Kind::Value(Value::Primitive(Primitive::Int { value, .. })),
+                ..
+            }) => Ok(Expression::IntLiteral { value, size: None }),
+            Some(Token {
+                kind: Kind::Value(Value::Primitive(Primitive::UInt { value, .. })),
+                ..
+            }) => Ok(Expression::UintLiteral { value, size: None }),
+            Some(Token {
+                kind: Kind::Var, ..
+            }) => self.parse_variable(),
+            t => todo!("{t:?}"),
         }
     }
 
@@ -154,7 +167,10 @@ impl<'par> Parser<'par> {
         };
 
         let name = match name {
-            Token::Ident(name) => name,
+            Token {
+                kind: Kind::Value(Value::Ident(name)),
+                ..
+            } => name,
             _ => panic!("invalid token where name of var should be"),
         };
 
@@ -164,7 +180,13 @@ impl<'par> Parser<'par> {
             );
         };
 
-        if !matches!(assign, Token::Equal) {
+        if !matches!(
+            assign,
+            Token {
+                kind: Kind::Op(Operator::Equal),
+                ..
+            }
+        ) {
             return Err(
                 miette::miette!("temporary error").with_source_code(self.source.to_string())
             );
@@ -175,12 +197,15 @@ impl<'par> Parser<'par> {
             value: Box::new(self.parse_expression()?),
         };
 
-        if self
-            .lexer
-            .next()
-            .transpose()?
-            .is_some_and(|token| !matches!(token, Token::SemiColon))
-        {
+        if self.lexer.next().transpose()?.is_some_and(|token| {
+            !matches!(
+                token,
+                Token {
+                    kind: Kind::Op(Operator::SemiColon),
+                    ..
+                }
+            )
+        }) {
             return Err(miette::miette! {
                 labels = vec![
                     LabeledSpan::at(0..3, "this expression"),

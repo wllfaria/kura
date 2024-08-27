@@ -3,31 +3,247 @@ source: lexer/src/lib.rs
 expression: punctuations
 ---
 [
-    LeftParen,
-    RightParen,
-    LeftBracket,
-    RightBracket,
-    LeftBrace,
-    RightBrace,
-    Comma,
-    Dot,
-    Plus,
-    Minus,
-    Equal,
-    Star,
-    Ampersand,
-    MultiplyAssign,
-    AddAssign,
-    MinusAssign,
-    DivideAssign,
-    Bang,
-    NotEqual,
-    EqualEqual,
-    LessEqual,
-    GreaterEqual,
-    Less,
-    Greater,
-    Slash,
-    Colon,
-    SemiColon,
+    Token {
+        kind: Op(
+            LeftParen,
+        ),
+        location: Location {
+            start_byte: 0,
+            end_byte: 1,
+        },
+    },
+    Token {
+        kind: Op(
+            RightParen,
+        ),
+        location: Location {
+            start_byte: 1,
+            end_byte: 2,
+        },
+    },
+    Token {
+        kind: Op(
+            LeftBracket,
+        ),
+        location: Location {
+            start_byte: 3,
+            end_byte: 4,
+        },
+    },
+    Token {
+        kind: Op(
+            RightBracket,
+        ),
+        location: Location {
+            start_byte: 4,
+            end_byte: 5,
+        },
+    },
+    Token {
+        kind: Op(
+            LeftBrace,
+        ),
+        location: Location {
+            start_byte: 6,
+            end_byte: 7,
+        },
+    },
+    Token {
+        kind: Op(
+            RightBrace,
+        ),
+        location: Location {
+            start_byte: 7,
+            end_byte: 8,
+        },
+    },
+    Token {
+        kind: Op(
+            Comma,
+        ),
+        location: Location {
+            start_byte: 9,
+            end_byte: 10,
+        },
+    },
+    Token {
+        kind: Op(
+            Dot,
+        ),
+        location: Location {
+            start_byte: 11,
+            end_byte: 12,
+        },
+    },
+    Token {
+        kind: Op(
+            Plus,
+        ),
+        location: Location {
+            start_byte: 13,
+            end_byte: 14,
+        },
+    },
+    Token {
+        kind: Op(
+            Minus,
+        ),
+        location: Location {
+            start_byte: 15,
+            end_byte: 16,
+        },
+    },
+    Token {
+        kind: Op(
+            Equal,
+        ),
+        location: Location {
+            start_byte: 17,
+            end_byte: 18,
+        },
+    },
+    Token {
+        kind: Op(
+            Star,
+        ),
+        location: Location {
+            start_byte: 19,
+            end_byte: 20,
+        },
+    },
+    Token {
+        kind: Op(
+            Ampersand,
+        ),
+        location: Location {
+            start_byte: 21,
+            end_byte: 22,
+        },
+    },
+    Token {
+        kind: Op(
+            MultiplyAssign,
+        ),
+        location: Location {
+            start_byte: 23,
+            end_byte: 25,
+        },
+    },
+    Token {
+        kind: Op(
+            AddAssign,
+        ),
+        location: Location {
+            start_byte: 26,
+            end_byte: 28,
+        },
+    },
+    Token {
+        kind: Op(
+            MinusAssign,
+        ),
+        location: Location {
+            start_byte: 29,
+            end_byte: 31,
+        },
+    },
+    Token {
+        kind: Op(
+            DivideAssign,
+        ),
+        location: Location {
+            start_byte: 32,
+            end_byte: 34,
+        },
+    },
+    Token {
+        kind: Op(
+            Bang,
+        ),
+        location: Location {
+            start_byte: 35,
+            end_byte: 36,
+        },
+    },
+    Token {
+        kind: Op(
+            NotEqual,
+        ),
+        location: Location {
+            start_byte: 37,
+            end_byte: 39,
+        },
+    },
+    Token {
+        kind: Op(
+            EqualEqual,
+        ),
+        location: Location {
+            start_byte: 40,
+            end_byte: 42,
+        },
+    },
+    Token {
+        kind: Op(
+            LessEqual,
+        ),
+        location: Location {
+            start_byte: 43,
+            end_byte: 45,
+        },
+    },
+    Token {
+        kind: Op(
+            GreaterEqual,
+        ),
+        location: Location {
+            start_byte: 46,
+            end_byte: 48,
+        },
+    },
+    Token {
+        kind: Op(
+            Less,
+        ),
+        location: Location {
+            start_byte: 49,
+            end_byte: 50,
+        },
+    },
+    Token {
+        kind: Op(
+            Greater,
+        ),
+        location: Location {
+            start_byte: 51,
+            end_byte: 52,
+        },
+    },
+    Token {
+        kind: Op(
+            Slash,
+        ),
+        location: Location {
+            start_byte: 53,
+            end_byte: 54,
+        },
+    },
+    Token {
+        kind: Op(
+            Colon,
+        ),
+        location: Location {
+            start_byte: 55,
+            end_byte: 56,
+        },
+    },
+    Token {
+        kind: Op(
+            SemiColon,
+        ),
+        location: Location {
+            start_byte: 57,
+            end_byte: 58,
+        },
+    },
 ]

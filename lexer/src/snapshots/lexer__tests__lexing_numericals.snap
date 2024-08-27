@@ -3,121 +3,344 @@ source: lexer/src/lib.rs
 expression: numerals
 ---
 [
-    Float {
-        value: 12346.6789,
-        size: None,
-    },
-    Integer {
-        value: 1234567890,
-        size: None,
-    },
-    Float {
-        value: 98765.4321,
-        size: None,
-    },
-    Float {
-        value: 98765.4321,
-        size: None,
-    },
-    Integer {
-        value: 9876543210,
-        size: None,
-    },
-    Integer {
-        value: 9876543210,
-        size: None,
-    },
-    Float {
-        value: -98765.4321,
-        size: None,
-    },
-    Float {
-        value: -12346.6789,
-        size: None,
-    },
-    Float {
-        value: -12346.6789,
-        size: None,
-    },
-    SignedInteger {
-        value: -1234567890,
-        size: None,
-    },
-    SignedInteger {
-        value: -9876543210,
-        size: None,
-    },
-    SignedInteger {
-        value: -9876543210,
-        size: None,
-    },
-    SignedInteger {
-        value: -9876,
-        size: None,
-    },
-    SignedInteger {
-        value: -5,
-        size: None,
-    },
-    SignedInteger {
-        value: -43210,
-        size: None,
-    },
-    SignedInteger {
-        value: -123456789,
-        size: Some(
-            SignedInt(
-                I32,
+    Token {
+        kind: Value(
+            Primitive(
+                Float {
+                    value: 12346.6789,
+                    size: None,
+                },
             ),
         ),
+        location: Location {
+            start_byte: 0,
+            end_byte: 11,
+        },
     },
-    Integer {
-        value: 123456789,
-        size: Some(
-            UnsignedInt(
-                Usize,
+    Token {
+        kind: Value(
+            Primitive(
+                UInt {
+                    value: 1234567890,
+                    size: None,
+                },
             ),
         ),
+        location: Location {
+            start_byte: 12,
+            end_byte: 22,
+        },
     },
-    Float {
-        value: 123.456789,
-        size: Some(
-            Float(
-                F64,
+    Token {
+        kind: Value(
+            Primitive(
+                Float {
+                    value: 98765.4321,
+                    size: None,
+                },
             ),
         ),
+        location: Location {
+            start_byte: 23,
+            end_byte: 43,
+        },
     },
-    Float {
-        value: 123.456789,
-        size: Some(
-            Float(
-                F64,
+    Token {
+        kind: Value(
+            Primitive(
+                Float {
+                    value: 98765.4321,
+                    size: None,
+                },
             ),
         ),
+        location: Location {
+            start_byte: 44,
+            end_byte: 58,
+        },
     },
-    SignedInteger {
-        value: -12,
-        size: Some(
-            Float(
-                F8,
+    Token {
+        kind: Value(
+            Primitive(
+                UInt {
+                    value: 9876543210,
+                    size: None,
+                },
             ),
         ),
+        location: Location {
+            start_byte: 59,
+            end_byte: 80,
+        },
     },
-    Float {
-        value: 3.141592653589793,
-        size: Some(
-            Float(
-                F32,
+    Token {
+        kind: Value(
+            Primitive(
+                UInt {
+                    value: 9876543210,
+                    size: None,
+                },
             ),
         ),
+        location: Location {
+            start_byte: 81,
+            end_byte: 94,
+        },
     },
-    Float {
-        value: 3.141592653,
-        size: Some(
-            Float(
-                F32,
+    Token {
+        kind: Value(
+            Primitive(
+                Float {
+                    value: -98765.4321,
+                    size: None,
+                },
             ),
         ),
+        location: Location {
+            start_byte: 95,
+            end_byte: 118,
+        },
     },
-    SemiColon,
+    Token {
+        kind: Value(
+            Primitive(
+                Float {
+                    value: -12346.6789,
+                    size: None,
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 119,
+            end_byte: 133,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Float {
+                    value: -12346.6789,
+                    size: None,
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 134,
+            end_byte: 146,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Int {
+                    value: -1234567890,
+                    size: None,
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 147,
+            end_byte: 158,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Int {
+                    value: -9876543210,
+                    size: None,
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 159,
+            end_byte: 181,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Int {
+                    value: -9876543210,
+                    size: None,
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 182,
+            end_byte: 196,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Int {
+                    value: -9876,
+                    size: None,
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 197,
+            end_byte: 204,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Int {
+                    value: -5,
+                    size: None,
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 204,
+            end_byte: 206,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Int {
+                    value: -43210,
+                    size: None,
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 206,
+            end_byte: 213,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Int {
+                    value: -123456789,
+                    size: Some(
+                        I32,
+                    ),
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 214,
+            end_byte: 227,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                UInt {
+                    value: 123456789,
+                    size: Some(
+                        Usize,
+                    ),
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 228,
+            end_byte: 242,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Float {
+                    value: 123.456789,
+                    size: Some(
+                        F64,
+                    ),
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 243,
+            end_byte: 256,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Float {
+                    value: 123.456789,
+                    size: Some(
+                        F64,
+                    ),
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 257,
+            end_byte: 270,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Int {
+                    value: -12,
+                    size: None,
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 271,
+            end_byte: 274,
+        },
+    },
+    Token {
+        kind: Value(
+            Ident(
+                "f8",
+            ),
+        ),
+        location: Location {
+            start_byte: 274,
+            end_byte: 276,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Float {
+                    value: 3.141592653589793,
+                    size: Some(
+                        F32,
+                    ),
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 277,
+            end_byte: 318,
+        },
+    },
+    Token {
+        kind: Value(
+            Primitive(
+                Float {
+                    value: 3.141592653,
+                    size: Some(
+                        F32,
+                    ),
+                },
+            ),
+        ),
+        location: Location {
+            start_byte: 319,
+            end_byte: 333,
+        },
+    },
+    Token {
+        kind: Op(
+            SemiColon,
+        ),
+        location: Location {
+            start_byte: 333,
+            end_byte: 334,
+        },
+    },
 ]
