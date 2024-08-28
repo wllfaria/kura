@@ -1,0 +1,122 @@
+---
+source: parser/src/lib.rs
+expression: result
+---
+[
+    If {
+        condition: BinaryOp {
+            operator: EqualEqual,
+            lhs: BinaryOp {
+                operator: Or,
+                lhs: BinaryOp {
+                    operator: EqualEqual,
+                    lhs: Ident {
+                        name: "const_name",
+                        location: Location {
+                            start_byte: 3,
+                            end_byte: 13,
+                        },
+                    },
+                    rhs: Ident {
+                        name: "another_name",
+                        location: Location {
+                            start_byte: 17,
+                            end_byte: 29,
+                        },
+                    },
+                    location: Location {
+                        start_byte: 3,
+                        end_byte: 29,
+                    },
+                },
+                rhs: Ident {
+                    name: "var_name",
+                    location: Location {
+                        start_byte: 33,
+                        end_byte: 41,
+                    },
+                },
+                location: Location {
+                    start_byte: 3,
+                    end_byte: 41,
+                },
+            },
+            rhs: Ident {
+                name: "const_name",
+                location: Location {
+                    start_byte: 45,
+                    end_byte: 55,
+                },
+            },
+            location: Location {
+                start_byte: 3,
+                end_byte: 55,
+            },
+        },
+        location: Location {
+            start_byte: 0,
+            end_byte: 55,
+        },
+        body: [
+            Const {
+                name: "my_new_const",
+                value: FloatLiteral {
+                    value: 123.0,
+                    size: None,
+                    location: Location {
+                        start_byte: 82,
+                        end_byte: 87,
+                    },
+                },
+                location: Location {
+                    start_byte: 82,
+                    end_byte: 87,
+                },
+            },
+            If {
+                condition: BinaryOp {
+                    operator: EqualEqual,
+                    lhs: Ident {
+                        name: "my_new_const",
+                        location: Location {
+                            start_byte: 95,
+                            end_byte: 107,
+                        },
+                    },
+                    rhs: Ident {
+                        name: "another_name",
+                        location: Location {
+                            start_byte: 111,
+                            end_byte: 123,
+                        },
+                    },
+                    location: Location {
+                        start_byte: 95,
+                        end_byte: 123,
+                    },
+                },
+                location: Location {
+                    start_byte: 92,
+                    end_byte: 123,
+                },
+                body: [
+                    Const {
+                        name: "yet_another",
+                        value: FloatLiteral {
+                            value: 123.0,
+                            size: None,
+                            location: Location {
+                                start_byte: 153,
+                                end_byte: 158,
+                            },
+                        },
+                        location: Location {
+                            start_byte: 153,
+                            end_byte: 158,
+                        },
+                    },
+                ],
+            },
+        ],
+    },
+]

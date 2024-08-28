@@ -286,11 +286,9 @@ impl<'par> Parser<'par> {
 
     fn parse_if(&mut self) -> Result<Expression<'par>, Error> {
         let keyword = self.assert_keyword(Kind::If)?;
-        self.assert_keyword(Kind::Op(Operator::LeftParen))?;
 
         let condition = self.parse_expression_with_precedence(0)?;
 
-        self.assert_keyword(Kind::Op(Operator::RightParen))?;
         self.assert_keyword(Kind::Op(Operator::LeftBrace))?;
 
         let mut body = vec![];
@@ -454,14 +452,28 @@ mod tests {
     }
 
     #[test]
-    fn tests() {
+    fn parsing_variables() {
         let source = [
-            "var var_name = 1 + 2 * 3 - 4;",
-            "var another_name = 123.4;",
-            "const const_name = 1.23 + 4.56 * 7.89;",
-            "if (const_name == another_name || var_name == const_name) {",
+            "var with_expression = 1 + 2 * 3 - 4;",
+            "var single_value = 123.4;",
+            "const constant_with_expression = 1.23 + 4.56 * 7.89;",
+        ];
+        let source = source.join("\n");
+
+        let result = match make_sut(&source).parse() {
+            Ok(result) => result,
+            Err(e) => panic!("{e:?}"),
+        };
+
+        insta::assert_debug_snapshot!(result);
+    }
+
+    #[test]
+    fn parsing_if_statement() {
+        let source = [
+            "if const_name == another_name || var_name == const_name {",
             "   const my_new_const = 123.0;",
-            "   if (my_new_const == another_name) {",
+            "   if my_new_const == another_name {",
             "       const yet_another = 123.0;",
             "   }",
             "}",
