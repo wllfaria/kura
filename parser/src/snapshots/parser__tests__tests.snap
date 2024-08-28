@@ -123,4 +123,120 @@ expression: result
             end_byte: 93,
         },
     },
+    If {
+        condition: BinaryOp {
+            operator: EqualEqual,
+            lhs: BinaryOp {
+                operator: Or,
+                lhs: BinaryOp {
+                    operator: EqualEqual,
+                    lhs: Ident {
+                        name: "const_name",
+                        location: Location {
+                            start_byte: 99,
+                            end_byte: 109,
+                        },
+                    },
+                    rhs: Ident {
+                        name: "another_name",
+                        location: Location {
+                            start_byte: 113,
+                            end_byte: 125,
+                        },
+                    },
+                    location: Location {
+                        start_byte: 99,
+                        end_byte: 125,
+                    },
+                },
+                rhs: Ident {
+                    name: "var_name",
+                    location: Location {
+                        start_byte: 129,
+                        end_byte: 137,
+                    },
+                },
+                location: Location {
+                    start_byte: 99,
+                    end_byte: 137,
+                },
+            },
+            rhs: Ident {
+                name: "const_name",
+                location: Location {
+                    start_byte: 141,
+                    end_byte: 151,
+                },
+            },
+            location: Location {
+                start_byte: 99,
+                end_byte: 151,
+            },
+        },
+        location: Location {
+            start_byte: 95,
+            end_byte: 151,
+        },
+        body: [
+            Const {
+                name: "my_new_const",
+                value: FloatLiteral {
+                    value: 123.0,
+                    size: None,
+                    location: Location {
+                        start_byte: 179,
+                        end_byte: 184,
+                    },
+                },
+                location: Location {
+                    start_byte: 179,
+                    end_byte: 184,
+                },
+            },
+            If {
+                condition: BinaryOp {
+                    operator: EqualEqual,
+                    lhs: Ident {
+                        name: "my_new_const",
+                        location: Location {
+                            start_byte: 193,
+                            end_byte: 205,
+                        },
+                    },
+                    rhs: Ident {
+                        name: "another_name",
+                        location: Location {
+                            start_byte: 209,
+                            end_byte: 221,
+                        },
+                    },
+                    location: Location {
+                        start_byte: 193,
+                        end_byte: 221,
+                    },
+                },
+                location: Location {
+                    start_byte: 189,
+                    end_byte: 221,
+                },
+                body: [
+                    Const {
+                        name: "yet_another",
+                        value: FloatLiteral {
+                            value: 123.0,
+                            size: None,
+                            location: Location {
+                                start_byte: 252,
+                                end_byte: 257,
+                            },
+                        },
+                        location: Location {
+                            start_byte: 252,
+                            end_byte: 257,
+                        },
+                    },
+                ],
+            },
+        ],
+    },
 ]

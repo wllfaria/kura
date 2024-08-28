@@ -1,4 +1,7 @@
-use std::ops::{Range, RangeBounds};
+use std::{
+    fmt,
+    ops::{Range, RangeBounds},
+};
 
 use miette::SourceSpan;
 
@@ -75,21 +78,8 @@ impl<'tok> Token<'tok> {
     }
 }
 
-impl std::fmt::Display for Token<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.kind {
-            Kind::Value(val) => write!(f, "{}", val),
-            Kind::Op(op) => write!(f, "{}", op),
-            Kind::Var => write!(f, ""),
-            Kind::Const => write!(f, ""),
-            Kind::Match => write!(f, ""),
-            Kind::If => write!(f, ""),
-            Kind::Else => write!(f, ""),
-            Kind::Fun => write!(f, ""),
-            Kind::Struct => write!(f, ""),
-            Kind::Enum => write!(f, ""),
-            Kind::Return => write!(f, ""),
-            Kind::Eof => write!(f, ""),
-        }
+impl fmt::Display for Token<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.kind)
     }
 }

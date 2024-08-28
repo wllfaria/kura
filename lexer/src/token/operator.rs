@@ -5,7 +5,7 @@ use super::{
     token::{IntoToken, Token},
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Operator {
     LeftParen,
     RightParen,

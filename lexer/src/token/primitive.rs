@@ -6,7 +6,7 @@ use super::{
     value::Value,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FloatSizes {
     F8,
     F16,
@@ -25,7 +25,7 @@ impl fmt::Display for FloatSizes {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum IntSizes {
     I8,
     I16,
@@ -46,7 +46,7 @@ impl fmt::Display for IntSizes {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum UIntSizes {
     U8,
     U16,
@@ -111,7 +111,7 @@ impl TryFrom<&str> for UIntSizes {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Primitive {
     Bool(bool),
     UInt {

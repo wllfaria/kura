@@ -2,7 +2,7 @@ use std::fmt;
 
 use super::primitive::Primitive;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Value<'tok> {
     Primitive(Primitive),
     Ident(&'tok str),
