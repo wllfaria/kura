@@ -1,8 +1,8 @@
 use miette::{Error, LabeledSpan};
 
-mod token;
+pub mod token;
 
-pub use token::{FloatSizes, IntoToken,Token, *};
+use token::*;
 
 pub struct Lexer<'lex> {
     pos: usize,
@@ -68,16 +68,17 @@ impl<'lex> Iterator for Lexer<'lex> {
                 // ----------------------------------------------------
                 // DOUBLE TOKENS
                 // ----------------------------------------------------
-                ('+', Some('=')) => Some(Ok(self.make_token(Operator::AddAssign, 2))),
+                ('+', Some('=')) => Some(Ok(self.make_token(Operator::PlusEqual, 2))),
                 ('=', Some('=')) => Some(Ok(self.make_token(Operator::EqualEqual, 2))),
                 ('=', Some('>')) => Some(Ok(self.make_token(Operator::ThickArrow, 2))),
-                ('*', Some('=')) => Some(Ok(self.make_token(Operator::MultiplyAssign, 2))),
-                ('/', Some('=')) => Some(Ok(self.make_token(Operator::DivideAssign, 2))),
+                ('*', Some('=')) => Some(Ok(self.make_token(Operator::StarEqual, 2))),
+                ('/', Some('=')) => Some(Ok(self.make_token(Operator::SlashEqual, 2))),
                 ('!', Some('=')) => Some(Ok(self.make_token(Operator::NotEqual, 2))),
                 ('<', Some('=')) => Some(Ok(self.make_token(Operator::LessEqual, 2))),
                 ('>', Some('=')) => Some(Ok(self.make_token(Operator::GreaterEqual, 2))),
-                ('-', Some('=')) => Some(Ok(self.make_token(Operator::MinusAssign, 2))),
+                ('-', Some('=')) => Some(Ok(self.make_token(Operator::MinusEqual, 2))),
                 ('&', Some('&')) => Some(Ok(self.make_token(Operator::And, 2))),
+                ('|', Some('|')) => Some(Ok(self.make_token(Operator::Or, 2))),
                 ('-', Some(c)) if c.is_numeric() => Some(self.lex_numerals()),
 
                 // ----------------------------------------------------
@@ -196,7 +197,7 @@ impl<'lex> Lexer<'lex> {
         let is_signed = literal.contains('-');
         let is_float = literal.contains('.');
         let token = match (is_float, is_signed) {
-            (false, true) => 
+            (false, true) =>
                 Primitive::Int {
                 value: match literal.parse() {
                     Ok(numeral) => numeral,
@@ -306,7 +307,7 @@ mod tests {
     fn lexing_punctuations() {
         let source = [
             "()", "[]", "{}", ",", ".", "+", "-", "=", "*", "&", "*=", "+=", "-=", "/=", "!", "!=",
-            "==", "<=", ">=", "<", ">", "/", ":", ";",
+            "==", "<=", ">=", "<", ">", "/", ":", ";", "&&", "||",
         ];
         let source = source.join(" ");
 

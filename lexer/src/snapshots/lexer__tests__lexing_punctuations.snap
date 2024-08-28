@@ -122,7 +122,7 @@ expression: punctuations
     },
     Token {
         kind: Op(
-            MultiplyAssign,
+            StarEqual,
         ),
         location: Location {
             start_byte: 23,
@@ -131,7 +131,7 @@ expression: punctuations
     },
     Token {
         kind: Op(
-            AddAssign,
+            PlusEqual,
         ),
         location: Location {
             start_byte: 26,
@@ -140,7 +140,7 @@ expression: punctuations
     },
     Token {
         kind: Op(
-            MinusAssign,
+            MinusEqual,
         ),
         location: Location {
             start_byte: 29,
@@ -149,7 +149,7 @@ expression: punctuations
     },
     Token {
         kind: Op(
-            DivideAssign,
+            SlashEqual,
         ),
         location: Location {
             start_byte: 32,
@@ -244,6 +244,24 @@ expression: punctuations
         location: Location {
             start_byte: 57,
             end_byte: 58,
+        },
+    },
+    Token {
+        kind: Op(
+            And,
+        ),
+        location: Location {
+            start_byte: 59,
+            end_byte: 61,
+        },
+    },
+    Token {
+        kind: Op(
+            Or,
+        ),
+        location: Location {
+            start_byte: 62,
+            end_byte: 64,
         },
     },
 ]

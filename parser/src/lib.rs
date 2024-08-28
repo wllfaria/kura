@@ -1,6 +1,9 @@
-use lexer::{FloatSizes, IntSizes, Kind, Lexer, Operator, Primitive, Token, UIntSizes, Value};
+use lexer::{
+    token::{FloatSizes, IntSizes, Kind, Location, Operator, Primitive, Token, UIntSizes, Value},
+    Lexer,
+};
 
-use miette::{Error, LabeledSpan};
+use miette::{Error, LabeledSpan, SourceSpan};
 
 #[derive(Debug)]
 pub enum BinaryOperator {
@@ -26,27 +29,50 @@ impl TryFrom<&Token<'_>> for BinaryOperator {
 
 #[derive(Debug)]
 pub enum Expression<'ast> {
-    VarNode {
+    Var {
         name: &'ast str,
         value: Box<Expression<'ast>>,
+        location: Location,
+    },
+    Const {
+        name: &'ast str,
+        value: Box<Expression<'ast>>,
+        location: Location,
     },
     UintLiteral {
         value: u64,
         size: Option<UIntSizes>,
+        location: Location,
     },
     FloatLiteral {
         value: f64,
         size: Option<FloatSizes>,
+        location: Location,
     },
     IntLiteral {
         value: i64,
         size: Option<IntSizes>,
+        location: Location,
     },
     BinaryOp {
         operator: BinaryOperator,
         lhs: Box<Expression<'ast>>,
         rhs: Box<Expression<'ast>>,
+        location: Location,
     },
+}
+
+impl Expression<'_> {
+    fn location(&self) -> Location {
+        match self {
+            Expression::Var { location, .. } => *location,
+            Expression::Const { location, .. } => *location,
+            Expression::UintLiteral { location, .. } => *location,
+            Expression::FloatLiteral { location, .. } => *location,
+            Expression::IntLiteral { location, .. } => *location,
+            Expression::BinaryOp { location, .. } => *location,
+        }
+    }
 }
 
 pub struct Parser<'par> {
@@ -77,8 +103,44 @@ impl<'par> Parser<'par> {
         Ok(statements)
     }
 
+    pub fn parse_value(&mut self) -> Result<Expression<'par>, Error> {
+        match self.lexer.peek() {
+            Some(result) => match result {
+                Ok(token) => match token {
+                    Token {
+                        kind: Kind::Value(Value::Primitive(Primitive::Int { .. })),
+                        ..
+                    } => self.parse_expression_with_precedence(0),
+                    Token {
+                        kind: Kind::Value(Value::Primitive(Primitive::Float { .. })),
+                        ..
+                    } => self.parse_expression_with_precedence(0),
+                    Token {
+                        kind: Kind::Value(Value::Primitive(Primitive::UInt { .. })),
+                        ..
+                    } => self.parse_expression_with_precedence(0),
+                    _ => todo!(),
+                },
+                Err(_) => todo!(),
+            },
+            None => todo!(),
+        }
+    }
+
     pub fn parse_expression(&mut self) -> Result<Expression<'par>, Error> {
-        self.parse_expression_with_precedence(0)
+        match self.lexer.peek() {
+            Some(result) => match result {
+                Ok(token) => match token {
+                    Token {
+                        kind: Kind::Value(_),
+                        ..
+                    } => self.parse_value(),
+                    t => todo!("{t:?}"),
+                },
+                Err(_) => todo!(),
+            },
+            None => todo!(),
+        }
     }
 
     pub fn peek_for_binary_operator(&mut self) -> Result<Option<&Token<'par>>, Error> {
@@ -111,6 +173,7 @@ impl<'par> Parser<'par> {
             let rhs = self.parse_expression_with_precedence(rhs_precedence)?;
 
             lhs = Expression::BinaryOp {
+                location: Location::new(lhs.location().start_byte, rhs.location().end_byte),
                 operator: op,
                 lhs: Box::new(lhs),
                 rhs: Box::new(rhs),
@@ -124,56 +187,72 @@ impl<'par> Parser<'par> {
         match self.lexer.next().transpose()? {
             Some(Token {
                 kind: Kind::Value(Value::Primitive(Primitive::Float { value, .. })),
+                location,
                 ..
-            }) => Ok(Expression::FloatLiteral { value, size: None }),
+            }) => Ok(Expression::FloatLiteral {
+                value,
+                size: None,
+                location,
+            }),
             Some(Token {
                 kind: Kind::Value(Value::Primitive(Primitive::Int { value, .. })),
+                location,
                 ..
-            }) => Ok(Expression::IntLiteral { value, size: None }),
+            }) => Ok(Expression::IntLiteral {
+                value,
+                size: None,
+                location,
+            }),
             Some(Token {
                 kind: Kind::Value(Value::Primitive(Primitive::UInt { value, .. })),
+                location,
                 ..
-            }) => Ok(Expression::UintLiteral { value, size: None }),
+            }) => Ok(Expression::UintLiteral {
+                value,
+                size: None,
+                location,
+            }),
             _ => todo!(),
         }
     }
 
     pub fn parse_statement(&mut self) -> Result<Expression<'par>, Error> {
-        match self.lexer.next().transpose()? {
-            Some(Token {
-                kind: Kind::Value(Value::Primitive(Primitive::Float { value, .. })),
-                ..
-            }) => Ok(Expression::FloatLiteral { value, size: None }),
-            Some(Token {
-                kind: Kind::Value(Value::Primitive(Primitive::Int { value, .. })),
-                ..
-            }) => Ok(Expression::IntLiteral { value, size: None }),
-            Some(Token {
-                kind: Kind::Value(Value::Primitive(Primitive::UInt { value, .. })),
-                ..
-            }) => Ok(Expression::UintLiteral { value, size: None }),
-            Some(Token {
-                kind: Kind::Var, ..
-            }) => self.parse_variable(),
-            t => todo!("{t:?}"),
+        match self.lexer.peek() {
+            Some(Ok(token)) => match token {
+                Token {
+                    kind: Kind::Var, ..
+                } => self.parse_variable(),
+                Token {
+                    kind: Kind::Const, ..
+                } => self.parse_constant(),
+                t => todo!("{t:?}"),
+            },
+            _ => todo!(),
         }
     }
 
-    pub fn parse_variable(&mut self) -> Result<Expression<'par>, Error> {
-        let Some(name) = self.lexer.next().transpose()? else {
+    pub fn parse_identifier(&mut self) -> Result<&'par str, Error> {
+        let Some(identifier) = self.lexer.next().transpose()? else {
             return Err(
                 miette::miette!("temporary error").with_source_code(self.source.to_string())
             );
         };
 
-        let name = match name {
+        match identifier {
             Token {
                 kind: Kind::Value(Value::Ident(name)),
                 ..
-            } => name,
-            _ => panic!("invalid token where name of var should be"),
-        };
+            } => Ok(name),
+            _ => Err(miette::miette! {
+                labels = vec![LabeledSpan::at(SourceSpan::from(identifier.location), "this expression")],
+                help = format!("We expected an identifier, but found `{identifier}`"),
+                "invalid identifier",
+            }
+            .with_source_code(self.source.to_string())),
+        }
+    }
 
+    pub fn parse_assign(&mut self) -> Result<(), Error> {
         let Some(assign) = self.lexer.next().transpose()? else {
             return Err(
                 miette::miette!("temporary error").with_source_code(self.source.to_string())
@@ -190,31 +269,74 @@ impl<'par> Parser<'par> {
             return Err(
                 miette::miette!("temporary error").with_source_code(self.source.to_string())
             );
-        }
-
-        let expression = Expression::VarNode {
-            name,
-            value: Box::new(self.parse_expression()?),
         };
 
-        if self.lexer.next().transpose()?.is_some_and(|token| {
-            !matches!(
-                token,
-                Token {
-                    kind: Kind::Op(Operator::SemiColon),
-                    ..
-                }
-            )
-        }) {
+        Ok(())
+    }
+
+    pub fn assert_semicolon(&mut self, start: usize, end: usize) -> Result<(), Error> {
+        let location = start..end;
+        let next = self.lexer.next().transpose()?;
+        if next.is_none()
+            || next.is_some_and(|token| {
+                !matches!(
+                    token,
+                    Token {
+                        kind: Kind::Op(Operator::SemiColon),
+                        ..
+                    }
+                )
+            })
+        {
             return Err(miette::miette! {
                 labels = vec![
-                    LabeledSpan::at(0..3, "this expression"),
+                    LabeledSpan::at(location, "this expression"),
                 ],
                 help = "you might have forgotten a `;` semicolon",
                 "Unterminated expression",
             }
             .with_source_code(self.source.to_string()));
         }
+
+        Ok(())
+    }
+
+    pub fn parse_constant(&mut self) -> Result<Expression<'par>, Error> {
+        let keyword = self.lexer.next().transpose()?.expect("");
+
+        let name = self.parse_identifier()?;
+
+        self.parse_assign()?;
+
+        let expression = self.parse_expression()?;
+        let expression = Expression::Const {
+            location: expression.location(),
+            name,
+            value: Box::new(expression),
+        };
+
+        let (start, end) = (keyword.location.start_byte, expression.location().end_byte);
+        self.assert_semicolon(start, end)?;
+
+        Ok(expression)
+    }
+
+    pub fn parse_variable(&mut self) -> Result<Expression<'par>, Error> {
+        let keyword = self.lexer.next().transpose()?.expect("");
+
+        let name = self.parse_identifier()?;
+
+        self.parse_assign()?;
+
+        let expression = self.parse_expression()?;
+        let expression = Expression::Var {
+            location: expression.location(),
+            name,
+            value: Box::new(expression),
+        };
+
+        let (start, end) = (keyword.location.start_byte, expression.location().end_byte);
+        self.assert_semicolon(start, end)?;
 
         Ok(expression)
     }
@@ -231,8 +353,9 @@ mod tests {
     #[test]
     fn tests() {
         let source = [
-            "var some_name = 1 + 2 * 3 - 4;",
+            "var var_name = 1 + 2 * 3 - 4;",
             "var another_name = 123.4;",
+            "const const_name = 1.23 + 4.56 * 7.89;",
         ];
         let source = source.join("\n");
 

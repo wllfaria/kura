@@ -3,8 +3,8 @@ source: parser/src/lib.rs
 expression: result
 ---
 [
-    VarNode {
-        name: "some_name",
+    Var {
+        name: "var_name",
         value: BinaryOp {
             operator: Sub,
             lhs: BinaryOp {
@@ -12,30 +12,115 @@ expression: result
                 lhs: UintLiteral {
                     value: 1,
                     size: None,
+                    location: Location {
+                        start_byte: 15,
+                        end_byte: 16,
+                    },
                 },
                 rhs: BinaryOp {
                     operator: Mul,
                     lhs: UintLiteral {
                         value: 2,
                         size: None,
+                        location: Location {
+                            start_byte: 19,
+                            end_byte: 20,
+                        },
                     },
                     rhs: UintLiteral {
                         value: 3,
                         size: None,
+                        location: Location {
+                            start_byte: 23,
+                            end_byte: 24,
+                        },
                     },
+                    location: Location {
+                        start_byte: 19,
+                        end_byte: 24,
+                    },
+                },
+                location: Location {
+                    start_byte: 15,
+                    end_byte: 24,
                 },
             },
             rhs: UintLiteral {
                 value: 4,
                 size: None,
+                location: Location {
+                    start_byte: 27,
+                    end_byte: 28,
+                },
+            },
+            location: Location {
+                start_byte: 15,
+                end_byte: 28,
             },
         },
+        location: Location {
+            start_byte: 15,
+            end_byte: 28,
+        },
     },
-    VarNode {
+    Var {
         name: "another_name",
         value: FloatLiteral {
             value: 123.4,
             size: None,
+            location: Location {
+                start_byte: 49,
+                end_byte: 54,
+            },
+        },
+        location: Location {
+            start_byte: 49,
+            end_byte: 54,
+        },
+    },
+    Const {
+        name: "const_name",
+        value: BinaryOp {
+            operator: Add,
+            lhs: FloatLiteral {
+                value: 1.23,
+                size: None,
+                location: Location {
+                    start_byte: 75,
+                    end_byte: 79,
+                },
+            },
+            rhs: BinaryOp {
+                operator: Mul,
+                lhs: FloatLiteral {
+                    value: 4.56,
+                    size: None,
+                    location: Location {
+                        start_byte: 82,
+                        end_byte: 86,
+                    },
+                },
+                rhs: FloatLiteral {
+                    value: 7.89,
+                    size: None,
+                    location: Location {
+                        start_byte: 89,
+                        end_byte: 93,
+                    },
+                },
+                location: Location {
+                    start_byte: 82,
+                    end_byte: 93,
+                },
+            },
+            location: Location {
+                start_byte: 75,
+                end_byte: 93,
+            },
+        },
+        location: Location {
+            start_byte: 75,
+            end_byte: 93,
         },
     },
 ]
