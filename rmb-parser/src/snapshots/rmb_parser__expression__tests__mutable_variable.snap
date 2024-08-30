@@ -1,0 +1,50 @@
+---
+source: rmb-parser/src/expression.rs
+expression: variables_ast
+---
+Var {
+    mutable: true,
+    name: "hello",
+    value: BinaryOp {
+        operator: Plus,
+        lhs: UintLiteral {
+            value: 1,
+            size: None,
+            location: Location {
+                start_byte: 12,
+                end_byte: 13,
+            },
+        },
+        rhs: BinaryOp {
+            operator: Star,
+            lhs: UintLiteral {
+                value: 2,
+                size: None,
+                location: Location {
+                    start_byte: 16,
+                    end_byte: 17,
+                },
+            },
+            rhs: UintLiteral {
+                value: 3,
+                size: None,
+                location: Location {
+                    start_byte: 20,
+                    end_byte: 21,
+                },
+            },
+            location: Location {
+                start_byte: 16,
+                end_byte: 21,
+            },
+        },
+        location: Location {
+            start_byte: 12,
+            end_byte: 21,
+        },
+    },
+    location: Location {
+        start_byte: 0,
+        end_byte: 21,
+    },
+}

@@ -1,0 +1,145 @@
+---
+source: rmb-parser/src/lib.rs
+expression: ast
+---
+[
+    Fun {
+        name: "calculate_circumference",
+        arguments: [
+            FunArgument {
+                name: "diameter",
+                arg_type: Ident {
+                    name: "f64",
+                    location: Location {
+                        start_byte: 38,
+                        end_byte: 41,
+                    },
+                },
+                location: Location {
+                    start_byte: 28,
+                    end_byte: 41,
+                },
+            },
+        ],
+        body: [
+            Var {
+                mutable: false,
+                name: "pi",
+                value: FloatLiteral {
+                    value: 3.141592653589793,
+                    size: Some(
+                        F32,
+                    ),
+                    location: Location {
+                        start_byte: 67,
+                        end_byte: 108,
+                    },
+                },
+                location: Location {
+                    start_byte: 56,
+                    end_byte: 108,
+                },
+            },
+            Var {
+                mutable: false,
+                name: "radius",
+                value: BinaryOp {
+                    operator: Slash,
+                    lhs: Ident {
+                        name: "diameter",
+                        location: Location {
+                            start_byte: 129,
+                            end_byte: 137,
+                        },
+                    },
+                    rhs: FloatLiteral {
+                        value: 2.0,
+                        size: None,
+                        location: Location {
+                            start_byte: 140,
+                            end_byte: 143,
+                        },
+                    },
+                    location: Location {
+                        start_byte: 129,
+                        end_byte: 143,
+                    },
+                },
+                location: Location {
+                    start_byte: 114,
+                    end_byte: 143,
+                },
+            },
+            Var {
+                mutable: false,
+                name: "circumference",
+                value: BinaryOp {
+                    operator: Star,
+                    lhs: BinaryOp {
+                        operator: Star,
+                        lhs: FloatLiteral {
+                            value: 2.0,
+                            size: None,
+                            location: Location {
+                                start_byte: 171,
+                                end_byte: 174,
+                            },
+                        },
+                        rhs: Ident {
+                            name: "pi",
+                            location: Location {
+                                start_byte: 177,
+                                end_byte: 179,
+                            },
+                        },
+                        location: Location {
+                            start_byte: 171,
+                            end_byte: 179,
+                        },
+                    },
+                    rhs: Ident {
+                        name: "radius",
+                        location: Location {
+                            start_byte: 182,
+                            end_byte: 188,
+                        },
+                    },
+                    location: Location {
+                        start_byte: 171,
+                        end_byte: 188,
+                    },
+                },
+                location: Location {
+                    start_byte: 149,
+                    end_byte: 188,
+                },
+            },
+            Return {
+                value: Ident {
+                    name: "circumference",
+                    location: Location {
+                        start_byte: 202,
+                        end_byte: 215,
+                    },
+                },
+                location: Location {
+                    start_byte: 195,
+                    end_byte: 216,
+                },
+            },
+        ],
+        return_type: Some(
+            Ident {
+                name: "f64",
+                location: Location {
+                    start_byte: 46,
+                    end_byte: 49,
+                },
+            },
+        ),
+        location: Location {
+            start_byte: 0,
+            end_byte: 218,
+        },
+    },
+]

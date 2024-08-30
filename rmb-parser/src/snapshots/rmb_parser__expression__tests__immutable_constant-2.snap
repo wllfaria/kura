@@ -1,0 +1,5 @@
+---
+source: rmb-parser/src/expression.rs
+expression: variables_ast
+---
+const hello = (+ 1 (* 2 3));

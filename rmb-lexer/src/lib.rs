@@ -1,13 +1,31 @@
-use miette::{Error, LabeledSpan};
+use miette::{Error, LabeledSpan, SourceSpan};
 
 pub mod token;
 
 use token::*;
 
+pub trait TransposeRef<'a, T, E> {
+    fn transpose(self) -> Result<Option<&'a T>, E>;
+}
+
+impl<'lex> TransposeRef<'lex, Token<'lex>, miette::Report>
+    for Option<&'lex Result<Token<'lex>, miette::Report>>
+{
+    fn transpose(self) -> Result<Option<&'lex Token<'lex>>, miette::Report> {
+        match self {
+            Some(result) => match result {
+                Ok(token) => Ok(Some(token)),
+                Err(e) => Err(miette::miette!(e.to_string())),
+            },
+            None => Ok(None),
+        }
+    }
+}
+
 pub struct Lexer<'lex> {
     pos: usize,
     source: &'lex str,
-    complete_source: &'lex str,
+    pub complete_source: &'lex str,
     peeked: Option<Result<Token<'lex>, Error>>,
 }
 
@@ -29,6 +47,7 @@ impl<'lex> Lexer<'lex> {
         if self.peeked.is_none() {
             self.peeked = self.next();
         }
+
         self.peeked.as_ref()
     }
 
@@ -43,6 +62,49 @@ impl<'lex> Lexer<'lex> {
         let start_byte = self.pos;
         self.advance_by(size);
         tokenizable.into_token(start_byte, self.pos)
+    }
+
+    pub fn expect(&mut self, expected: Kind<'_>) -> Result<Token<'lex>, Error> {
+        let Some(token) = self.next().transpose()? else {
+            let location = self.complete_source.len() - 1..self.complete_source.len();
+            return Err(miette::miette! {
+                labels = vec![
+                    LabeledSpan::at(location, format!("syntax error: expected {expected}")),
+                ],
+                "invalid token kind. expected: {expected} but got eof",
+            }
+            .with_source_code(self.complete_source.to_string()));
+        };
+        let kind = &token.kind;
+
+        if kind == &expected {
+            Ok(token)
+        } else {
+            Err(miette::miette! {
+                labels = vec![
+                    LabeledSpan::at(SourceSpan::from(token.location), format!("syntax error: expected {expected}")),
+                ],
+                "invalid token kind. expected: {expected} but got {kind}",
+            }
+            .with_source_code(self.complete_source.to_string()))
+        }
+    }
+
+    pub fn expect_one_of(&mut self, expected_list: &[Kind<'_>]) -> Result<Token<'lex>, Error> {
+        let token = self.next().transpose()?;
+        let kind = token.as_ref().map(|token| &token.kind);
+        let kind = kind.unwrap_or(&Kind::Eof);
+
+        if expected_list.contains(kind) {
+            Ok(token.unwrap())
+        } else {
+            let kinds = expected_list
+                .iter()
+                .map(|k| k.to_string())
+                .collect::<Vec<_>>()
+                .join(" ");
+            panic!("invalid token kind. expected one of {kinds} but got {kind}");
+        }
     }
 }
 

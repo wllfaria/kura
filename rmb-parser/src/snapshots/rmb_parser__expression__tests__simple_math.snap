@@ -1,0 +1,57 @@
+---
+source: rmb-parser/src/expression.rs
+expression: math_expr_ast
+---
+BinaryOp {
+    operator: Minus,
+    lhs: BinaryOp {
+        operator: Plus,
+        lhs: UintLiteral {
+            value: 1,
+            size: None,
+            location: Location {
+                start_byte: 0,
+                end_byte: 1,
+            },
+        },
+        rhs: BinaryOp {
+            operator: Star,
+            lhs: UintLiteral {
+                value: 2,
+                size: None,
+                location: Location {
+                    start_byte: 4,
+                    end_byte: 5,
+                },
+            },
+            rhs: UintLiteral {
+                value: 3,
+                size: None,
+                location: Location {
+                    start_byte: 8,
+                    end_byte: 9,
+                },
+            },
+            location: Location {
+                start_byte: 4,
+                end_byte: 9,
+            },
+        },
+        location: Location {
+            start_byte: 0,
+            end_byte: 9,
+        },
+    },
+    rhs: UintLiteral {
+        value: 4,
+        size: None,
+        location: Location {
+            start_byte: 12,
+            end_byte: 13,
+        },
+    },
+    location: Location {
+        start_byte: 0,
+        end_byte: 13,
+    },
+}

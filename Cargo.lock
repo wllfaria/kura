@@ -121,14 +121,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
-name = "lexer"
-version = "0.1.0"
-dependencies = [
- "insta",
- "miette",
-]
-
-[[package]]
 name = "libc"
 version = "0.2.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -208,15 +200,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "caff54706df99d2a78a5a4e3455ff45448d81ef1bb63c22cd14052ca0e993a3f"
 
 [[package]]
-name = "parser"
-version = "0.1.0"
-dependencies = [
- "insta",
- "lexer",
- "miette",
-]
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -232,6 +215,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b5b9d34b8991d19d98081b46eacdd8eb58c6f2b201139f7c5f643cc155a633af"
 dependencies = [
  "proc-macro2",
+]
+
+[[package]]
+name = "rmb-lexer"
+version = "0.1.0"
+dependencies = [
+ "insta",
+ "miette",
+]
+
+[[package]]
+name = "rmb-parser"
+version = "0.1.0"
+dependencies = [
+ "insta",
+ "miette",
+ "rmb-lexer",
 ]
 
 [[package]]

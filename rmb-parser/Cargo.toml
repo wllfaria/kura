@@ -1,9 +1,10 @@
 [package]
-name = "lexer"
+name = "rmb-parser"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+rmb-lexer.workspace = true
 miette.workspace = true
 
 [dev-dependencies]
