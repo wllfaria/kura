@@ -25,6 +25,7 @@ expression: ast
             Var {
                 mutable: false,
                 name: "pi",
+                typ: None,
                 value: FloatLiteral {
                     value: 3.141592653589793,
                     size: Some(
@@ -43,6 +44,7 @@ expression: ast
             Var {
                 mutable: false,
                 name: "radius",
+                typ: None,
                 value: BinaryOp {
                     operator: Slash,
                     lhs: Ident {
@@ -73,6 +75,7 @@ expression: ast
             Var {
                 mutable: false,
                 name: "circumference",
+                typ: None,
                 value: BinaryOp {
                     operator: Star,
                     lhs: BinaryOp {
@@ -117,11 +120,13 @@ expression: ast
             Var {
                 mutable: false,
                 name: "nesting",
+                typ: None,
                 value: Block {
                     expressions: [
                         Var {
                             mutable: false,
                             name: "something",
+                            typ: None,
                             value: UintLiteral {
                                 value: 10,
                                 size: None,
@@ -138,6 +143,7 @@ expression: ast
                         Var {
                             mutable: true,
                             name: "nesting_more",
+                            typ: None,
                             value: Block {
                                 expressions: [
                                     Return {

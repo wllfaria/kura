@@ -70,6 +70,7 @@ impl<'tok> Kind<'tok> {
                 | Kind::Op(Operator::EqualEqual)
                 | Kind::Op(Operator::Less)
                 | Kind::Op(Operator::LessEqual)
+                | Kind::Op(Operator::NotEqual)
                 | Kind::Op(Operator::GreaterEqual)
         )
     }

@@ -8,9 +8,7 @@ pub trait TransposeRef<'a, T, E> {
     fn transpose(self) -> Result<Option<&'a T>, E>;
 }
 
-impl<'lex> TransposeRef<'lex, Token<'lex>, miette::Report>
-    for Option<&'lex Result<Token<'lex>, miette::Report>>
-{
+impl<'lex> TransposeRef<'lex, Token<'lex>, miette::Report> for Option<&'lex Result<Token<'lex>, miette::Report>> {
     fn transpose(self) -> Result<Option<&'lex Token<'lex>>, miette::Report> {
         match self {
             Some(result) => match result {
@@ -142,7 +140,43 @@ impl<'lex> Iterator for Lexer<'lex> {
                 ('&', Some('&')) => Some(Ok(self.make_token(Operator::And, 2))),
                 ('|', Some('|')) => Some(Ok(self.make_token(Operator::Or, 2))),
                 ('-', Some(c)) if c.is_numeric() => Some(self.lex_numerals()),
+                // we ignore a comment until the end of the line
+                ('/', Some('/')) => {
+                    let eol_location = self.source.find(|c| matches!(c, '\n')).unwrap_or(self.source.len());
+                    self.advance_by(eol_location);
+                    continue;
+                }
+                // for multiline comments, we ignore until we find the closing pattern
+                ('/', Some('*')) => {
+                    // we start past the next 2 characters as we know they are `/*`
+                    let mut pos = 2;
+                    let mut open_comments = 1;
+                    loop {
+                        if pos > self.source.len() - 1 {
+                            break;
+                        }
 
+                        let curr = self.source.chars().nth(pos);
+                        let next = self.source.chars().nth(pos + 1);
+
+                        match (curr, next) {
+                            (Some('*'), Some('/')) => open_comments -= 1,
+                            (Some('/'), Some('*')) => open_comments += 1,
+                            _ => (),
+                        }
+
+                        pos += 1;
+
+                        if open_comments == 0 {
+                            pos += 1;
+                            break;
+                        }
+                    }
+
+                    self.advance_by(pos);
+
+                    continue;
+                }
                 // ----------------------------------------------------
                 // SINGLE TOKENS
                 // ----------------------------------------------------
@@ -259,42 +293,50 @@ impl<'lex> Lexer<'lex> {
         let is_signed = literal.contains('-');
         let is_float = literal.contains('.');
         let token = match (is_float, is_signed) {
-            (false, true) =>
-                Primitive::Int {
+            (false, true) => Primitive::Int {
                 value: match literal.parse() {
                     Ok(numeral) => numeral,
-                    Err(e) => return Err(miette::miette! {
-                        labels = vec![
-                            LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
-                        ],
-                        "{e}",
-                    }.with_source_code(self.complete_source.to_string())),
+                    Err(e) => {
+                        return Err(miette::miette! {
+                            labels = vec![
+                                LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
+                            ],
+                            "{e}",
+                        }
+                        .with_source_code(self.complete_source.to_string()))
+                    }
                 },
-                size: IntSizes::try_from(postfix).ok()
+                size: IntSizes::try_from(postfix).ok(),
             },
             (false, false) => Primitive::UInt {
                 value: match literal.parse() {
                     Ok(numeral) => numeral,
-                    Err(e) => return Err(miette::miette! {
-                        labels = vec![
-                            LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
-                        ],
-                        "{e}",
-                    }.with_source_code(self.complete_source.to_string())),
+                    Err(e) => {
+                        return Err(miette::miette! {
+                            labels = vec![
+                                LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
+                            ],
+                            "{e}",
+                        }
+                        .with_source_code(self.complete_source.to_string()))
+                    }
                 },
-                size: UIntSizes::try_from(postfix).ok()
+                size: UIntSizes::try_from(postfix).ok(),
             },
             (true, _) => Primitive::Float {
                 value: match literal.parse() {
                     Ok(numeral) => numeral,
-                    Err(e) => return Err(miette::miette! {
-                        labels = vec![
-                            LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
-                        ],
-                        "{e}",
-                    }.with_source_code(self.complete_source.to_string())),
+                    Err(e) => {
+                        return Err(miette::miette! {
+                            labels = vec![
+                                LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
+                            ],
+                            "{e}",
+                        }
+                        .with_source_code(self.complete_source.to_string()))
+                    }
                 },
-                size: FloatSizes::try_from(postfix).ok()
+                size: FloatSizes::try_from(postfix).ok(),
             },
         };
 
@@ -368,8 +410,8 @@ mod tests {
     #[test]
     fn lexing_punctuations() {
         let source = [
-            "()", "[]", "{}", ",", ".", "+", "-", "=", "*", "&", "*=", "+=", "-=", "/=", "!", "!=",
-            "==", "<=", ">=", "<", ">", "/", ":", ";", "&&", "||",
+            "()", "[]", "{}", ",", ".", "+", "-", "=", "*", "&", "*=", "+=", "-=", "/=", "!", "!=", "==", "<=", ">=",
+            "<", ">", "/", ":", ";", "&&", "||",
         ];
         let source = source.join(" ");
 
@@ -383,9 +425,7 @@ mod tests {
 
     #[test]
     fn lexing_builtin_identifiers() {
-        let source = [
-            "var", "const", "match", "if", "else", "fun", "struct", "enum", "return",
-        ];
+        let source = ["var", "const", "match", "if", "else", "fun", "struct", "enum", "return"];
 
         let source = source.join(" ");
 

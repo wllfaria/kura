@@ -29,6 +29,7 @@ pub enum Expression<'ast> {
     Var {
         mutable: bool,
         name: &'ast str,
+        typ: Option<Box<Expression<'ast>>>,
         value: Box<Expression<'ast>>,
         location: Location,
     },
@@ -39,7 +40,22 @@ pub enum Expression<'ast> {
     If {
         condition: Box<Expression<'ast>>,
         location: Location,
-        body: Vec<Expression<'ast>>,
+        truthy: Box<Expression<'ast>>,
+        // each `else` or `else if` are added here, if nothing, then
+        // this will be an empty vec
+        //
+        // TODO: maybe use Options so we dont allocate a vector
+        falsy: Vec<Expression<'ast>>,
+    },
+    FunCall {
+        ident: Box<Expression<'ast>>,
+        location: Location,
+        arguments: Vec<Expression<'ast>>,
+    },
+    Assign {
+        ident: Box<Expression<'ast>>,
+        location: Location,
+        value: Box<Expression<'ast>>,
     },
     Ident {
         name: &'ast str,
@@ -84,6 +100,8 @@ impl Expression<'_> {
             Expression::Ident { location, .. } => *location,
             Expression::Bool { location, .. } => *location,
             Expression::Block { location, .. } => *location,
+            Expression::FunCall { location, .. } => *location,
+            Expression::Assign { location, .. } => *location,
             Expression::UintLiteral { location, .. } => *location,
             Expression::Return { location, .. } => *location,
             Expression::FloatLiteral { location, .. } => *location,
@@ -141,10 +159,7 @@ impl<'par> Parser<'par> {
 
             arguments.push(Statement::FunArgument {
                 name: arg_name,
-                location: Location::new(
-                    arg_name_expr.location().start_byte,
-                    arg_type.location().end_byte,
-                ),
+                location: Location::new(arg_name_expr.location().start_byte, arg_type.location().end_byte),
                 arg_type: Box::new(arg_type),
             });
 
@@ -253,6 +268,43 @@ mod tests {
             
                 return circumference;
             }"#;
+
+        let ast = match make_sut(source).parse() {
+            Ok(expr) => expr,
+            Err(e) => panic!("{e:?}"),
+        };
+
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn language_features() {
+        let source = r#"
+            fun some_function_name(argument: TypeOfArg) => ReturnType {
+                const immutable_var = if truthy_val {
+                    return 10;
+                } else if another_truthy == 10 {
+                    return 20 + 3 * 2;
+                } else {
+                    const my_inner_var: f64 = 100; // comments don't matter
+                    // this would be invalid when we do type checking
+                    // as we never return!
+                };
+
+                /*
+                 * we also have multiline comments! 
+                    /* Although both regular
+                     * and multiline comments will never appear on the parser
+                     * ast, as they are ignored on the lexer 
+                     **/
+                 **/
+
+                var mutable_value = function_call(immutable_var + 10, immutable_var);
+                mutable_value = 10;
+
+                return mutable_value;
+            }
+        "#;
 
         let ast = match make_sut(source).parse() {
             Ok(expr) => expr,

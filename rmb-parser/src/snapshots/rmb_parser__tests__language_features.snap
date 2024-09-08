@@ -1,0 +1,288 @@
+---
+source: rmb-parser/src/lib.rs
+expression: ast
+---
+[
+    Fun {
+        name: "some_function_name",
+        arguments: [
+            FunArgument {
+                name: "argument",
+                arg_type: Ident {
+                    name: "TypeOfArg",
+                    location: Location {
+                        start_byte: 46,
+                        end_byte: 55,
+                    },
+                },
+                location: Location {
+                    start_byte: 36,
+                    end_byte: 55,
+                },
+            },
+        ],
+        body: [
+            Var {
+                mutable: false,
+                name: "immutable_var",
+                typ: None,
+                value: If {
+                    condition: Ident {
+                        name: "truthy_val",
+                        location: Location {
+                            start_byte: 114,
+                            end_byte: 124,
+                        },
+                    },
+                    location: Location {
+                        start_byte: 111,
+                        end_byte: 477,
+                    },
+                    truthy: Block {
+                        expressions: [
+                            Return {
+                                value: UintLiteral {
+                                    value: 10,
+                                    size: None,
+                                    location: Location {
+                                        start_byte: 154,
+                                        end_byte: 156,
+                                    },
+                                },
+                                location: Location {
+                                    start_byte: 147,
+                                    end_byte: 157,
+                                },
+                            },
+                        ],
+                        location: Location {
+                            start_byte: 125,
+                            end_byte: 175,
+                        },
+                    },
+                    falsy: [
+                        If {
+                            condition: BinaryOp {
+                                operator: EqualEqual,
+                                lhs: Ident {
+                                    name: "another_truthy",
+                                    location: Location {
+                                        start_byte: 184,
+                                        end_byte: 198,
+                                    },
+                                },
+                                rhs: UintLiteral {
+                                    value: 10,
+                                    size: None,
+                                    location: Location {
+                                        start_byte: 202,
+                                        end_byte: 204,
+                                    },
+                                },
+                                location: Location {
+                                    start_byte: 184,
+                                    end_byte: 204,
+                                },
+                            },
+                            location: Location {
+                                start_byte: 181,
+                                end_byte: 477,
+                            },
+                            truthy: Block {
+                                expressions: [
+                                    Return {
+                                        value: BinaryOp {
+                                            operator: Plus,
+                                            lhs: UintLiteral {
+                                                value: 20,
+                                                size: None,
+                                                location: Location {
+                                                    start_byte: 234,
+                                                    end_byte: 236,
+                                                },
+                                            },
+                                            rhs: BinaryOp {
+                                                operator: Star,
+                                                lhs: UintLiteral {
+                                                    value: 3,
+                                                    size: None,
+                                                    location: Location {
+                                                        start_byte: 239,
+                                                        end_byte: 240,
+                                                    },
+                                                },
+                                                rhs: UintLiteral {
+                                                    value: 2,
+                                                    size: None,
+                                                    location: Location {
+                                                        start_byte: 243,
+                                                        end_byte: 244,
+                                                    },
+                                                },
+                                                location: Location {
+                                                    start_byte: 239,
+                                                    end_byte: 244,
+                                                },
+                                            },
+                                            location: Location {
+                                                start_byte: 234,
+                                                end_byte: 244,
+                                            },
+                                        },
+                                        location: Location {
+                                            start_byte: 227,
+                                            end_byte: 245,
+                                        },
+                                    },
+                                ],
+                                location: Location {
+                                    start_byte: 205,
+                                    end_byte: 263,
+                                },
+                            },
+                            falsy: [
+                                Block {
+                                    expressions: [
+                                        Var {
+                                            mutable: false,
+                                            name: "my_inner_var",
+                                            typ: Some(
+                                                Ident {
+                                                    name: "f64",
+                                                    location: Location {
+                                                        start_byte: 311,
+                                                        end_byte: 314,
+                                                    },
+                                                },
+                                            ),
+                                            value: UintLiteral {
+                                                value: 100,
+                                                size: None,
+                                                location: Location {
+                                                    start_byte: 317,
+                                                    end_byte: 320,
+                                                },
+                                            },
+                                            location: Location {
+                                                start_byte: 291,
+                                                end_byte: 320,
+                                            },
+                                        },
+                                    ],
+                                    location: Location {
+                                        start_byte: 269,
+                                        end_byte: 477,
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+                location: Location {
+                    start_byte: 89,
+                    end_byte: 477,
+                },
+            },
+            Var {
+                mutable: true,
+                name: "mutable_value",
+                typ: None,
+                value: FunCall {
+                    ident: Ident {
+                        name: "function_call",
+                        location: Location {
+                            start_byte: 820,
+                            end_byte: 833,
+                        },
+                    },
+                    location: Location {
+                        start_byte: 820,
+                        end_byte: 868,
+                    },
+                    arguments: [
+                        BinaryOp {
+                            operator: Plus,
+                            lhs: Ident {
+                                name: "immutable_var",
+                                location: Location {
+                                    start_byte: 834,
+                                    end_byte: 847,
+                                },
+                            },
+                            rhs: UintLiteral {
+                                value: 10,
+                                size: None,
+                                location: Location {
+                                    start_byte: 850,
+                                    end_byte: 852,
+                                },
+                            },
+                            location: Location {
+                                start_byte: 834,
+                                end_byte: 852,
+                            },
+                        },
+                        Ident {
+                            name: "immutable_var",
+                            location: Location {
+                                start_byte: 854,
+                                end_byte: 867,
+                            },
+                        },
+                    ],
+                },
+                location: Location {
+                    start_byte: 800,
+                    end_byte: 868,
+                },
+            },
+            Assign {
+                ident: Ident {
+                    name: "mutable_value",
+                    location: Location {
+                        start_byte: 886,
+                        end_byte: 899,
+                    },
+                },
+                location: Location {
+                    start_byte: 886,
+                    end_byte: 905,
+                },
+                value: UintLiteral {
+                    value: 10,
+                    size: None,
+                    location: Location {
+                        start_byte: 902,
+                        end_byte: 904,
+                    },
+                },
+            },
+            Return {
+                value: Ident {
+                    name: "mutable_value",
+                    location: Location {
+                        start_byte: 930,
+                        end_byte: 943,
+                    },
+                },
+                location: Location {
+                    start_byte: 923,
+                    end_byte: 944,
+                },
+            },
+        ],
+        return_type: Some(
+            Ident {
+                name: "ReturnType",
+                location: Location {
+                    start_byte: 60,
+                    end_byte: 70,
+                },
+            },
+        ),
+        location: Location {
+            start_byte: 13,
+            end_byte: 958,
+        },
+    },
+]

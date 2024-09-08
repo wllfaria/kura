@@ -1,0 +1,116 @@
+---
+source: rmb-parser/src/expression.rs
+expression: let_if_ast
+---
+Var {
+    mutable: false,
+    name: "my_var",
+    typ: None,
+    value: If {
+        condition: BinaryOp {
+            operator: EqualEqual,
+            lhs: Ident {
+                name: "something",
+                location: Location {
+                    start_byte: 31,
+                    end_byte: 40,
+                },
+            },
+            rhs: Ident {
+                name: "another_thing",
+                location: Location {
+                    start_byte: 44,
+                    end_byte: 57,
+                },
+            },
+            location: Location {
+                start_byte: 31,
+                end_byte: 57,
+            },
+        },
+        location: Location {
+            start_byte: 28,
+            end_byte: 158,
+        },
+        truthy: Block {
+            expressions: [
+                Return {
+                    value: BinaryOp {
+                        operator: Plus,
+                        lhs: UintLiteral {
+                            value: 10,
+                            size: None,
+                            location: Location {
+                                start_byte: 83,
+                                end_byte: 85,
+                            },
+                        },
+                        rhs: UintLiteral {
+                            value: 10,
+                            size: None,
+                            location: Location {
+                                start_byte: 88,
+                                end_byte: 90,
+                            },
+                        },
+                        location: Location {
+                            start_byte: 83,
+                            end_byte: 90,
+                        },
+                    },
+                    location: Location {
+                        start_byte: 76,
+                        end_byte: 91,
+                    },
+                },
+            ],
+            location: Location {
+                start_byte: 58,
+                end_byte: 105,
+            },
+        },
+        falsy: [
+            Block {
+                expressions: [
+                    Return {
+                        value: BinaryOp {
+                            operator: Plus,
+                            lhs: UintLiteral {
+                                value: 20,
+                                size: None,
+                                location: Location {
+                                    start_byte: 136,
+                                    end_byte: 138,
+                                },
+                            },
+                            rhs: UintLiteral {
+                                value: 20,
+                                size: None,
+                                location: Location {
+                                    start_byte: 141,
+                                    end_byte: 143,
+                                },
+                            },
+                            location: Location {
+                                start_byte: 136,
+                                end_byte: 143,
+                            },
+                        },
+                        location: Location {
+                            start_byte: 129,
+                            end_byte: 144,
+                        },
+                    },
+                ],
+                location: Location {
+                    start_byte: 111,
+                    end_byte: 158,
+                },
+            },
+        ],
+    },
+    location: Location {
+        start_byte: 13,
+        end_byte: 158,
+    },
+}

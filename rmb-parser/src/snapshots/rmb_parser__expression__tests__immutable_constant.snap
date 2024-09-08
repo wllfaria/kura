@@ -5,6 +5,7 @@ expression: variables_ast
 Var {
     mutable: false,
     name: "hello",
+    typ: None,
     value: BinaryOp {
         operator: Plus,
         lhs: UintLiteral {
