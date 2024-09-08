@@ -11,13 +11,13 @@ expression: ast
                 arg_type: Ident {
                     name: "f64",
                     location: Location {
-                        start_byte: 38,
-                        end_byte: 41,
+                        start_byte: 51,
+                        end_byte: 54,
                     },
                 },
                 location: Location {
-                    start_byte: 28,
-                    end_byte: 41,
+                    start_byte: 41,
+                    end_byte: 54,
                 },
             },
         ],
@@ -31,13 +31,13 @@ expression: ast
                         F32,
                     ),
                     location: Location {
-                        start_byte: 67,
-                        end_byte: 108,
+                        start_byte: 92,
+                        end_byte: 133,
                     },
                 },
                 location: Location {
-                    start_byte: 56,
-                    end_byte: 108,
+                    start_byte: 81,
+                    end_byte: 133,
                 },
             },
             Var {
@@ -48,26 +48,26 @@ expression: ast
                     lhs: Ident {
                         name: "diameter",
                         location: Location {
-                            start_byte: 129,
-                            end_byte: 137,
+                            start_byte: 166,
+                            end_byte: 174,
                         },
                     },
                     rhs: FloatLiteral {
                         value: 2.0,
                         size: None,
                         location: Location {
-                            start_byte: 140,
-                            end_byte: 143,
+                            start_byte: 177,
+                            end_byte: 180,
                         },
                     },
                     location: Location {
-                        start_byte: 129,
-                        end_byte: 143,
+                        start_byte: 166,
+                        end_byte: 180,
                     },
                 },
                 location: Location {
-                    start_byte: 114,
-                    end_byte: 143,
+                    start_byte: 151,
+                    end_byte: 180,
                 },
             },
             Var {
@@ -81,50 +81,170 @@ expression: ast
                             value: 2.0,
                             size: None,
                             location: Location {
-                                start_byte: 171,
-                                end_byte: 174,
+                                start_byte: 220,
+                                end_byte: 223,
                             },
                         },
                         rhs: Ident {
                             name: "pi",
                             location: Location {
-                                start_byte: 177,
-                                end_byte: 179,
+                                start_byte: 226,
+                                end_byte: 228,
                             },
                         },
                         location: Location {
-                            start_byte: 171,
-                            end_byte: 179,
+                            start_byte: 220,
+                            end_byte: 228,
                         },
                     },
                     rhs: Ident {
                         name: "radius",
                         location: Location {
-                            start_byte: 182,
-                            end_byte: 188,
+                            start_byte: 231,
+                            end_byte: 237,
                         },
                     },
                     location: Location {
-                        start_byte: 171,
-                        end_byte: 188,
+                        start_byte: 220,
+                        end_byte: 237,
                     },
                 },
                 location: Location {
-                    start_byte: 149,
-                    end_byte: 188,
+                    start_byte: 198,
+                    end_byte: 237,
+                },
+            },
+            Var {
+                mutable: false,
+                name: "nesting",
+                value: Block {
+                    expressions: [
+                        Var {
+                            mutable: false,
+                            name: "something",
+                            value: UintLiteral {
+                                value: 10,
+                                size: None,
+                                location: Location {
+                                    start_byte: 312,
+                                    end_byte: 314,
+                                },
+                            },
+                            location: Location {
+                                start_byte: 294,
+                                end_byte: 314,
+                            },
+                        },
+                        Var {
+                            mutable: true,
+                            name: "nesting_more",
+                            value: Block {
+                                expressions: [
+                                    Return {
+                                        value: BinaryOp {
+                                            operator: Plus,
+                                            lhs: UintLiteral {
+                                                value: 10,
+                                                size: None,
+                                                location: Location {
+                                                    start_byte: 388,
+                                                    end_byte: 390,
+                                                },
+                                            },
+                                            rhs: BinaryOp {
+                                                operator: Star,
+                                                lhs: UintLiteral {
+                                                    value: 3,
+                                                    size: None,
+                                                    location: Location {
+                                                        start_byte: 393,
+                                                        end_byte: 394,
+                                                    },
+                                                },
+                                                rhs: UintLiteral {
+                                                    value: 4,
+                                                    size: None,
+                                                    location: Location {
+                                                        start_byte: 397,
+                                                        end_byte: 398,
+                                                    },
+                                                },
+                                                location: Location {
+                                                    start_byte: 393,
+                                                    end_byte: 398,
+                                                },
+                                            },
+                                            location: Location {
+                                                start_byte: 388,
+                                                end_byte: 398,
+                                            },
+                                        },
+                                        location: Location {
+                                            start_byte: 381,
+                                            end_byte: 399,
+                                        },
+                                    },
+                                ],
+                                location: Location {
+                                    start_byte: 355,
+                                    end_byte: 421,
+                                },
+                            },
+                            location: Location {
+                                start_byte: 336,
+                                end_byte: 421,
+                            },
+                        },
+                        Return {
+                            value: BinaryOp {
+                                operator: Plus,
+                                lhs: UintLiteral {
+                                    value: 10,
+                                    size: None,
+                                    location: Location {
+                                        start_byte: 450,
+                                        end_byte: 452,
+                                    },
+                                },
+                                rhs: Ident {
+                                    name: "something",
+                                    location: Location {
+                                        start_byte: 455,
+                                        end_byte: 464,
+                                    },
+                                },
+                                location: Location {
+                                    start_byte: 450,
+                                    end_byte: 464,
+                                },
+                            },
+                            location: Location {
+                                start_byte: 443,
+                                end_byte: 465,
+                            },
+                        },
+                    ],
+                    location: Location {
+                        start_byte: 272,
+                        end_byte: 483,
+                    },
+                },
+                location: Location {
+                    start_byte: 256,
+                    end_byte: 483,
                 },
             },
             Return {
                 value: Ident {
                     name: "circumference",
                     location: Location {
-                        start_byte: 202,
-                        end_byte: 215,
+                        start_byte: 521,
+                        end_byte: 534,
                     },
                 },
                 location: Location {
-                    start_byte: 195,
-                    end_byte: 216,
+                    start_byte: 514,
+                    end_byte: 535,
                 },
             },
         ],
@@ -132,14 +252,14 @@ expression: ast
             Ident {
                 name: "f64",
                 location: Location {
-                    start_byte: 46,
-                    end_byte: 49,
+                    start_byte: 59,
+                    end_byte: 62,
                 },
             },
         ),
         location: Location {
-            start_byte: 0,
-            end_byte: 218,
+            start_byte: 13,
+            end_byte: 549,
         },
     },
 ]

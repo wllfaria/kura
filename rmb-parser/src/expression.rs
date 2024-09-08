@@ -1,4 +1,4 @@
-use miette::{Error, LabeledSpan, Report};
+use miette::{Error, LabeledSpan};
 
 use crate::Expression;
 use rmb_lexer::{
@@ -62,14 +62,50 @@ pub fn parse_identifier<'parser>(
     }
 }
 
+fn parse_expr_block<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, Error> {
+    let mut expressions = vec![];
+
+    let block_start = lexer.expect(Kind::Op(Operator::LeftBrace))?;
+
+    loop {
+        match lexer.peek().transpose()? {
+            Some(token) => {
+                if let Kind::Op(Operator::RightBrace) = token.kind {
+                    break;
+                }
+            }
+            None => break,
+        }
+
+        let expr = parse_expression(lexer)?;
+        expressions.push(expr);
+    }
+
+    let block_end = lexer.expect(Kind::Op(Operator::RightBrace))?;
+
+    let location = block_start.location.start_byte..block_end.location.end_byte;
+    Ok(Expression::Block {
+        expressions,
+        location: location.into(),
+    })
+}
+
 fn parse_variable<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, Error> {
     let keyword = lexer.expect_one_of(&[Kind::Var, Kind::Const])?;
     let mutable = matches!(keyword.kind, Kind::Var);
 
     let (_, name) = parse_identifier(lexer)?;
+
     lexer.expect(Kind::Op(Operator::Equal))?;
 
-    let value = parse_expression(lexer)?;
+    let value = match lexer.peek().transpose()? {
+        Some(token) => match token.kind {
+            Kind::Op(Operator::LeftBrace) => parse_expr_block(lexer)?,
+            _ => parse_expression(lexer)?,
+        },
+        _ => unreachable!(),
+    };
+
     lexer.expect(Kind::Op(Operator::SemiColon))?;
 
     let location = Location::new(keyword.location.start_byte, value.location().end_byte);
@@ -80,6 +116,8 @@ fn parse_variable<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'par
         location,
     })
 }
+
+//fn parse_if_expression<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, Error> {}
 
 fn parse_with_precedence<'parser>(
     lexer: &mut Lexer<'parser>,
@@ -106,6 +144,7 @@ fn parse_with_precedence<'parser>(
                 t => todo!("{t:?}"),
             },
             Kind::Return => parse_return_expression(lexer)?,
+            //Kind::If => parse_if_expression(lexer)?,
             t => todo!("{t:?}"),
         },
         None => todo!(),
@@ -211,8 +250,6 @@ mod tests {
         };
 
         insta::assert_debug_snapshot!(math_expr_ast);
-
-        assert_eq!(math_expr_ast.to_string(), "(- (+ 1 (* 2 3)) 4)");
     }
 
     #[test]
@@ -226,9 +263,6 @@ mod tests {
         };
 
         insta::assert_debug_snapshot!(variables_ast);
-        insta::assert_snapshot!(variables_ast);
-
-        assert_eq!(variables_ast.to_string(), "var hello = (+ 1 (* 2 3));");
     }
 
     #[test]
@@ -242,8 +276,26 @@ mod tests {
         };
 
         insta::assert_debug_snapshot!(variables_ast);
-        insta::assert_snapshot!(variables_ast);
+    }
 
-        assert_eq!(variables_ast.to_string(), "const hello = (+ 1 (* 2 3));");
+    #[test]
+    fn if_statement() {
+        let source = r#"
+            if something == another_thing {
+                let this_is_a_var = 10 + 3;
+            } else if something == 10 {
+                let this_is_another = 10 + 10;
+            } else {
+                let omg = 1 + 1;
+            }
+        "#;
+        let mut parser = make_sut(source);
+
+        //let if_ast = match parse_expression(&mut parser.lexer) {
+        //    Ok(expr) => expr,
+        //    Err(e) => panic!("{e:?}"),
+        //};
+
+        //insta::assert_debug_snapshot!(if_ast);
     }
 }

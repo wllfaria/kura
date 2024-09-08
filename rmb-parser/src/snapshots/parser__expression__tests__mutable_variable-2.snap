@@ -1,5 +1,0 @@
----
-source: parser/src/expression.rs
-expression: variables_ast
----
-var hello = (+ 1 (* 2 3));

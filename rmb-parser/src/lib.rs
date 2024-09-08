@@ -1,13 +1,28 @@
 mod expression;
 
 use rmb_lexer::{
-    token::{FloatSizes, IntSizes, Kind, Location, Operator, Token, UIntSizes, Value},
+    token::{FloatSizes, IntSizes, Kind, Location, Operator, Token, UIntSizes},
     Lexer, TransposeRef,
 };
-use std::fmt;
 
 use crate::expression::{parse_expression, parse_identifier};
 use miette::{Error, LabeledSpan, SourceSpan};
+
+#[derive(Debug)]
+pub enum Statement<'ast> {
+    FunArgument {
+        name: &'ast str,
+        arg_type: Box<Expression<'ast>>,
+        location: Location,
+    },
+    Fun {
+        name: &'ast str,
+        arguments: Vec<Statement<'ast>>,
+        body: Vec<Expression<'ast>>,
+        return_type: Option<Box<Expression<'ast>>>,
+        location: Location,
+    },
+}
 
 #[derive(Debug)]
 pub enum Expression<'ast> {
@@ -30,16 +45,8 @@ pub enum Expression<'ast> {
         name: &'ast str,
         location: Location,
     },
-    Fun {
-        name: &'ast str,
-        arguments: Vec<Expression<'ast>>,
-        body: Vec<Expression<'ast>>,
-        return_type: Option<Box<Expression<'ast>>>,
-        location: Location,
-    },
-    FunArgument {
-        name: &'ast str,
-        arg_type: Box<Expression<'ast>>,
+    Block {
+        expressions: Vec<Expression<'ast>>,
         location: Location,
     },
     UintLiteral {
@@ -69,91 +76,14 @@ pub enum Expression<'ast> {
     },
 }
 
-impl<'ast> Expression<'ast> {
-    fn fmt_with_indentation(&self, f: &mut fmt::Formatter<'_>, indent_level: usize) -> fmt::Result {
-        let indent = " ".repeat(indent_level * 4);
-
-        match self {
-            Expression::Var {
-                mutable,
-                name,
-                value,
-                ..
-            } => {
-                let kind = if *mutable { "var" } else { "const" };
-                write!(f, "{indent}{kind} {name} = {value};")
-            }
-            Expression::Bool { value, .. } => write!(f, "{value}"),
-            Expression::If { .. } => todo!(),
-            Expression::Ident { name, .. } => write!(f, "{name}"),
-            Expression::UintLiteral { value, size, .. } => {
-                let size = size.as_ref().map(|s| s.to_string()).unwrap_or_default();
-                write!(f, "{value}{size}")
-            }
-            Expression::Fun {
-                name,
-                arguments,
-                body,
-                return_type,
-                ..
-            } => {
-                write!(f, "{indent}fun {name}(")?;
-                for (i, arg) in arguments.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ", ")?;
-                    }
-                    write!(f, "{}", arg)?;
-                }
-                write!(f, ")")?;
-                if let Some(ret_type) = return_type {
-                    write!(f, " => {}", ret_type)?;
-                }
-                writeln!(f, " {{")?;
-                for (i, expr) in body.iter().enumerate() {
-                    expr.fmt_with_indentation(f, indent_level + 1)?;
-
-                    if i < body.len() {
-                        writeln!(f)?;
-                    }
-                }
-                writeln!(f, "{}}}", indent)
-            }
-            Expression::Return { value, .. } => write!(f, "{indent}return {value};"),
-            Expression::FunArgument { name, arg_type, .. } => write!(f, "{name}: {arg_type}"),
-            Expression::FloatLiteral { value, size, .. } => {
-                let size = size.as_ref().map(|s| s.to_string()).unwrap_or_default();
-                write!(f, "{value}{size}")
-            }
-            Expression::IntLiteral { value, size, .. } => {
-                let size = size.as_ref().map(|s| s.to_string()).unwrap_or_default();
-                write!(f, "{value}{size}")
-            }
-            Expression::BinaryOp {
-                operator, lhs, rhs, ..
-            } => {
-                write!(f, "({operator} ")?;
-                write!(f, "{lhs} ")?;
-                write!(f, "{rhs})")
-            }
-        }
-    }
-}
-
-impl fmt::Display for Expression<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.fmt_with_indentation(f, 0)
-    }
-}
-
 impl Expression<'_> {
     fn location(&self) -> Location {
         match self {
             Expression::Var { location, .. } => *location,
             Expression::If { location, .. } => *location,
             Expression::Ident { location, .. } => *location,
-            Expression::Fun { location, .. } => *location,
-            Expression::FunArgument { location, .. } => *location,
             Expression::Bool { location, .. } => *location,
+            Expression::Block { location, .. } => *location,
             Expression::UintLiteral { location, .. } => *location,
             Expression::Return { location, .. } => *location,
             Expression::FloatLiteral { location, .. } => *location,
@@ -176,7 +106,7 @@ impl<'par> Parser<'par> {
         }
     }
 
-    pub fn parse(mut self) -> Result<Vec<Expression<'par>>, Error> {
+    pub fn parse(mut self) -> Result<Vec<Statement<'par>>, Error> {
         let mut statements = vec![];
 
         loop {
@@ -191,7 +121,7 @@ impl<'par> Parser<'par> {
         Ok(statements)
     }
 
-    fn parse_statement(&mut self) -> Result<Expression<'par>, Error> {
+    fn parse_statement(&mut self) -> Result<Statement<'par>, Error> {
         match self.lexer.peek().transpose()? {
             Some(token) => match &token.kind {
                 Kind::Fun => self.parse_function(),
@@ -201,11 +131,7 @@ impl<'par> Parser<'par> {
         }
     }
 
-    fn parse_function(&mut self) -> Result<Expression<'par>, Error> {
-        let keyword = self.lexer.expect(Kind::Fun)?;
-        let (_, fun_name) = parse_identifier(&mut self.lexer)?;
-        self.lexer.expect(Kind::Op(Operator::LeftParen))?;
-
+    fn parse_function_args(&mut self, start_kw: &Token<'_>) -> Result<Vec<Statement<'par>>, Error> {
         let mut arguments = vec![];
 
         loop {
@@ -213,7 +139,7 @@ impl<'par> Parser<'par> {
             self.lexer.expect(Kind::Op(Operator::Colon))?;
             let (arg_type, _) = parse_identifier(&mut self.lexer)?;
 
-            arguments.push(Expression::FunArgument {
+            arguments.push(Statement::FunArgument {
                 name: arg_name,
                 location: Location::new(
                     arg_name_expr.location().start_byte,
@@ -227,7 +153,7 @@ impl<'par> Parser<'par> {
                     Kind::Op(Operator::RightParen) => break,
                     Kind::Op(Operator::Comma) => (),
                     _ => {
-                        let location = keyword.location.start_byte..token.location.end_byte;
+                        let location = start_kw.location.start_byte..token.location.end_byte;
                         return Err(miette::miette! {
                             labels = vec![
                                 LabeledSpan::at(SourceSpan::from(location), "this function declaration")
@@ -241,6 +167,16 @@ impl<'par> Parser<'par> {
                 None => break,
             }
         }
+
+        Ok(arguments)
+    }
+
+    fn parse_function(&mut self) -> Result<Statement<'par>, Error> {
+        let keyword = self.lexer.expect(Kind::Fun)?;
+        let (_, fun_name) = parse_identifier(&mut self.lexer)?;
+        self.lexer.expect(Kind::Op(Operator::LeftParen))?;
+
+        let arguments = self.parse_function_args(&keyword)?;
 
         // after parsing argument list we need to consume the closing parenthesis
         self.lexer.expect(Kind::Op(Operator::RightParen))?;
@@ -261,7 +197,6 @@ impl<'par> Parser<'par> {
             None
         };
 
-        // and also the opening brace
         self.lexer.expect(Kind::Op(Operator::LeftBrace))?;
 
         let mut body = vec![];
@@ -282,7 +217,7 @@ impl<'par> Parser<'par> {
         let closing_brace = self.lexer.expect(Kind::Op(Operator::RightBrace))?;
 
         let location = keyword.location.start_byte..closing_brace.location.end_byte;
-        Ok(Expression::Fun {
+        Ok(Statement::Fun {
             name: fun_name,
             arguments,
             body,
@@ -302,36 +237,28 @@ mod tests {
 
     #[test]
     fn function_declaration() {
-        let source = [
-            "fun calculate_circumference(diameter: f64) => f64 {",
-            "    const pi = 3.14159265358979323846264338327950288_f32;",
-            "    const radius = diameter / 2.0;",
-            "    const circumference = 2.0 * pi * radius;",
-            "",
-            "    return circumference;",
-            "}",
-        ];
+        let source = r#"
+            fun calculate_circumference(diameter: f64) => f64 {
+                const pi = 3.14159265358979323846264338327950288_f32;
+                const radius = diameter / 2.0;
+                const circumference = 2.0 * pi * radius;
 
-        let expected = [
-            "fun calculate_circumference(diameter: f64) => f64 {",
-            "    const pi = 3.141592653589793f32;",
-            "    const radius = (/ diameter 2);",
-            "    const circumference = (* (* 2 pi) radius);",
-            "    return circumference;",
-            "}\n",
-        ];
-        let source = source.join("\n");
-        let expected = expected.join("\n");
+                const nesting = {
+                    const something = 10;
+                    var nesting_more = {
+                        return 10 + 3 * 4;
+                    };
+                    return 10 + something;
+                };
+            
+                return circumference;
+            }"#;
 
-        let ast = match make_sut(&source).parse() {
+        let ast = match make_sut(source).parse() {
             Ok(expr) => expr,
             Err(e) => panic!("{e:?}"),
         };
-        let fun_expr = &ast[0];
 
         insta::assert_debug_snapshot!(ast);
-        insta::assert_snapshot!(fun_expr);
-
-        assert_eq!(fun_expr.to_string(), expected);
     }
 }
