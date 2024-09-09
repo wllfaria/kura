@@ -159,7 +159,10 @@ impl<'par> Parser<'par> {
 
             arguments.push(Statement::FunArgument {
                 name: arg_name,
-                location: Location::new(arg_name_expr.location().start_byte, arg_type.location().end_byte),
+                location: Location::new(
+                    arg_name_expr.location().start_byte,
+                    arg_type.location().end_byte,
+                ),
                 arg_type: Box::new(arg_type),
             });
 
@@ -225,7 +228,7 @@ impl<'par> Parser<'par> {
                 }
                 None => break,
             }
-            body.push(parse_expression(&mut self.lexer)?);
+            body.push(parse_expression(&mut self.lexer, true)?);
         }
 
         // consume the closing brace of the function
@@ -301,6 +304,13 @@ mod tests {
 
                 var mutable_value = function_call(immutable_var + 10, immutable_var);
                 mutable_value = 10;
+
+                {
+                    const something = println(10 + 3);
+                    println(10);
+                    something_else();
+                    var something = func_call();
+                }
 
                 return mutable_value;
             }

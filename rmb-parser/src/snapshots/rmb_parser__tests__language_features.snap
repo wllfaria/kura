@@ -257,17 +257,132 @@ expression: ast
                     },
                 },
             },
+            Block {
+                expressions: [
+                    Var {
+                        mutable: false,
+                        name: "something",
+                        typ: None,
+                        value: FunCall {
+                            ident: Ident {
+                                name: "println",
+                                location: Location {
+                                    start_byte: 963,
+                                    end_byte: 970,
+                                },
+                            },
+                            location: Location {
+                                start_byte: 963,
+                                end_byte: 978,
+                            },
+                            arguments: [
+                                BinaryOp {
+                                    operator: Plus,
+                                    lhs: UintLiteral {
+                                        value: 10,
+                                        size: None,
+                                        location: Location {
+                                            start_byte: 971,
+                                            end_byte: 973,
+                                        },
+                                    },
+                                    rhs: UintLiteral {
+                                        value: 3,
+                                        size: None,
+                                        location: Location {
+                                            start_byte: 976,
+                                            end_byte: 977,
+                                        },
+                                    },
+                                    location: Location {
+                                        start_byte: 971,
+                                        end_byte: 977,
+                                    },
+                                },
+                            ],
+                        },
+                        location: Location {
+                            start_byte: 945,
+                            end_byte: 978,
+                        },
+                    },
+                    FunCall {
+                        ident: Ident {
+                            name: "println",
+                            location: Location {
+                                start_byte: 1000,
+                                end_byte: 1007,
+                            },
+                        },
+                        location: Location {
+                            start_byte: 1000,
+                            end_byte: 1011,
+                        },
+                        arguments: [
+                            UintLiteral {
+                                value: 10,
+                                size: None,
+                                location: Location {
+                                    start_byte: 1008,
+                                    end_byte: 1010,
+                                },
+                            },
+                        ],
+                    },
+                    FunCall {
+                        ident: Ident {
+                            name: "something_else",
+                            location: Location {
+                                start_byte: 1033,
+                                end_byte: 1047,
+                            },
+                        },
+                        location: Location {
+                            start_byte: 1033,
+                            end_byte: 1049,
+                        },
+                        arguments: [],
+                    },
+                    Var {
+                        mutable: true,
+                        name: "something",
+                        typ: None,
+                        value: FunCall {
+                            ident: Ident {
+                                name: "func_call",
+                                location: Location {
+                                    start_byte: 1087,
+                                    end_byte: 1096,
+                                },
+                            },
+                            location: Location {
+                                start_byte: 1087,
+                                end_byte: 1098,
+                            },
+                            arguments: [],
+                        },
+                        location: Location {
+                            start_byte: 1071,
+                            end_byte: 1098,
+                        },
+                    },
+                ],
+                location: Location {
+                    start_byte: 923,
+                    end_byte: 1117,
+                },
+            },
             Return {
                 value: Ident {
                     name: "mutable_value",
                     location: Location {
-                        start_byte: 930,
-                        end_byte: 943,
+                        start_byte: 1142,
+                        end_byte: 1155,
                     },
                 },
                 location: Location {
-                    start_byte: 923,
-                    end_byte: 944,
+                    start_byte: 1135,
+                    end_byte: 1156,
                 },
             },
         ],
@@ -282,7 +397,7 @@ expression: ast
         ),
         location: Location {
             start_byte: 13,
-            end_byte: 958,
+            end_byte: 1170,
         },
     },
 ]
