@@ -1,5 +1,5 @@
 ---
-source: rmb-parser/src/lib.rs
+source: kura-parser/src/lib.rs
 expression: ast
 ---
 [
@@ -240,17 +240,11 @@ expression: ast
                     end_byte: 483,
                 },
             },
-            Return {
-                value: Ident {
-                    name: "circumference",
-                    location: Location {
-                        start_byte: 521,
-                        end_byte: 534,
-                    },
-                },
+            Ident {
+                name: "circumference",
                 location: Location {
                     start_byte: 514,
-                    end_byte: 535,
+                    end_byte: 527,
                 },
             },
         ],
@@ -265,7 +259,7 @@ expression: ast
         ),
         location: Location {
             start_byte: 13,
-            end_byte: 549,
+            end_byte: 541,
         },
     },
 ]

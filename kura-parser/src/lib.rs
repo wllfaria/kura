@@ -1,8 +1,7 @@
 mod expression;
 
-use miette::{Error, LabeledSpan, SourceSpan};
-use rmb_lexer::token::{FloatSizes, IntSizes, Kind, Location, Operator, Token, UIntSizes};
-use rmb_lexer::{Lexer, TransposeRef};
+use kura_lexer::token::{FloatSizes, IntSizes, Kind, Location, Operator, Token, UIntSizes};
+use kura_lexer::{Lexer, TransposeRef};
 
 use crate::expression::{parse_expression, parse_identifier};
 
@@ -115,14 +114,11 @@ pub struct Parser<'par> {
 }
 
 impl<'par> Parser<'par> {
-    pub fn new(input: &'par str) -> Self {
-        Self {
-            source: input,
-            lexer: Lexer::new(input),
-        }
+    pub fn new(source: &'par str, lexer: Lexer<'par>) -> Self {
+        Self { source, lexer }
     }
 
-    pub fn parse(mut self) -> Result<Vec<Statement<'par>>, Error> {
+    pub fn parse(mut self) -> Result<Vec<Statement<'par>>, String> {
         let mut statements = vec![];
 
         while !self.lexer.is_empty() {
@@ -133,8 +129,8 @@ impl<'par> Parser<'par> {
         Ok(statements)
     }
 
-    fn parse_statement(&mut self) -> Result<Statement<'par>, Error> {
-        match self.lexer.peek().transpose()? {
+    fn parse_statement(&mut self) -> Result<Statement<'par>, String> {
+        match self.lexer.peek().transpose().map_err(|e| e.to_string())? {
             Some(token) => match &token.kind {
                 Kind::Fun => self.parse_function(),
                 t => todo!("{t:?}"),
@@ -143,12 +139,14 @@ impl<'par> Parser<'par> {
         }
     }
 
-    fn parse_function_args(&mut self, start_kw: &Token<'_>) -> Result<Vec<Statement<'par>>, Error> {
+    fn parse_function_args(&mut self, _: &Token<'_>) -> Result<Vec<Statement<'par>>, String> {
         let mut arguments = vec![];
 
         loop {
             let (arg_name_expr, arg_name) = parse_identifier(&mut self.lexer)?;
-            self.lexer.expect(Kind::Op(Operator::Colon))?;
+            self.lexer
+                .expect(Kind::Op(Operator::Colon))
+                .map_err(|e| e.to_string())?;
             let (arg_type, _) = parse_identifier(&mut self.lexer)?;
 
             arguments.push(Statement::FunArgument {
@@ -157,21 +155,11 @@ impl<'par> Parser<'par> {
                 arg_type: Box::new(arg_type),
             });
 
-            match self.lexer.peek().transpose()? {
+            match self.lexer.peek().transpose().map_err(|e| e.to_string())? {
                 Some(token) => match token.kind {
                     Kind::Op(Operator::RightParen) => break,
                     Kind::Op(Operator::Comma) => (),
-                    _ => {
-                        let location = start_kw.location.start_byte..token.location.end_byte;
-                        return Err(miette::miette! {
-                            labels = vec![
-                                LabeledSpan::at(SourceSpan::from(location), "this function declaration")
-                            ],
-                            help = "did you forget to add a comma (,) here?",
-                            "syntax error: unexpected identifier after argument type"
-                        }
-                        .with_source_code(self.source.to_string()));
-                    }
+                    _ => return Err(token.location.to_string())?,
                 },
                 None => break,
             }
@@ -180,50 +168,59 @@ impl<'par> Parser<'par> {
         Ok(arguments)
     }
 
-    fn parse_function(&mut self) -> Result<Statement<'par>, Error> {
-        let keyword = self.lexer.expect(Kind::Fun)?;
+    fn parse_function(&mut self) -> Result<Statement<'par>, String> {
+        let keyword = self.lexer.expect(Kind::Fun).map_err(|e| e.to_string())?;
         let (_, fun_name) = parse_identifier(&mut self.lexer)?;
-        self.lexer.expect(Kind::Op(Operator::LeftParen))?;
+        self.lexer
+            .expect(Kind::Op(Operator::LeftParen))
+            .map_err(|e| e.to_string())?;
 
-        let arguments = self.parse_function_args(&keyword)?;
+        let mut arguments = vec![];
+        if let Some(next) = self.lexer.peek().transpose().map_err(|e| e.to_string())? {
+            if !matches!(next.kind, Kind::Op(Operator::RightParen)) {
+                arguments = self.parse_function_args(&keyword)?;
+            }
+        }
 
         // after parsing argument list we need to consume the closing parenthesis
-        self.lexer.expect(Kind::Op(Operator::RightParen))?;
+        self.lexer
+            .expect(Kind::Op(Operator::RightParen))
+            .map_err(|e| e.to_string())?;
 
         // after the argument list of a function, there can be an optional return type annotation
         // => <TYPE> {
         // before the left brace, but its fine to be ommited
-        let has_return = match self.lexer.peek().transpose()? {
+        let has_return = match self.lexer.peek().transpose().map_err(|e| e.to_string())? {
             Some(token) => matches!(token.kind, Kind::Op(Operator::ThickArrow)),
             _ => false,
         };
 
         let return_type = if has_return {
-            self.lexer.next().transpose()?;
+            self.lexer.next().transpose().map_err(|e| e.to_string())?;
             let (identifier, _) = parse_identifier(&mut self.lexer)?;
             Some(Box::new(identifier))
         } else {
             None
         };
 
-        self.lexer.expect(Kind::Op(Operator::LeftBrace))?;
+        self.lexer
+            .expect(Kind::Op(Operator::LeftBrace))
+            .map_err(|e| e.to_string())?;
 
         let mut body = vec![];
 
-        loop {
-            match self.lexer.peek().transpose()? {
-                Some(token) => {
-                    if let Kind::Op(Operator::RightBrace) = token.kind {
-                        break;
-                    }
-                }
-                None => break,
+        while let Some(token) = self.lexer.peek().transpose().map_err(|e| e.to_string())? {
+            if let Kind::Op(Operator::RightBrace) = token.kind {
+                break;
             }
             body.push(parse_expression(&mut self.lexer, true)?);
         }
 
         // consume the closing brace of the function
-        let closing_brace = self.lexer.expect(Kind::Op(Operator::RightBrace))?;
+        let closing_brace = self
+            .lexer
+            .expect(Kind::Op(Operator::RightBrace))
+            .map_err(|e| e.to_string())?;
 
         let location = keyword.location.start_byte..closing_brace.location.end_byte;
         Ok(Statement::Fun {
@@ -241,7 +238,8 @@ mod tests {
     use super::*;
 
     fn make_sut(source: &str) -> Parser<'_> {
-        Parser::new(source)
+        let lexer = Lexer::new(source);
+        Parser::new(source, lexer)
     }
 
     #[test]
@@ -260,7 +258,7 @@ mod tests {
                     return 10 + something;
                 };
             
-                return circumference;
+                circumference
             }"#;
 
         let ast = match make_sut(source).parse() {
@@ -303,7 +301,7 @@ mod tests {
                     var something = func_call();
                 }
 
-                return mutable_value;
+                mutable_value
             }
         "#;
 

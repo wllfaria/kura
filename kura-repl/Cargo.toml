@@ -1,0 +1,9 @@
+[package]
+name = "kura-test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+kura-lexer.workspace = true
+kura-parser.workspace = true
+kura-typer.workspace = true

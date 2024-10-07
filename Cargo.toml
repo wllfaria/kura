@@ -1,7 +1,15 @@
 [workspace]
-members = ["kura-lexer", "kura-parser"]
+members = [
+    "kura-lexer",
+    "kura-parser",
+    "kura-typer",
+    "kura-repl",
+]
+edition = "2021"
+resolver = "2"
 
 [workspace.dependencies]
 kura-lexer = { path = "./kura-lexer" }
 kura-parser = { path = "./kura-parser" }
-
+kura-typer = { path = "./kura-typer" }
+kura-repl = { path = "./kura-repl" }

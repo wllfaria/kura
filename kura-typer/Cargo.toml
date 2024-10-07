@@ -1,0 +1,7 @@
+[package]
+name = "kura-typer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+kura-parser.workspace = true

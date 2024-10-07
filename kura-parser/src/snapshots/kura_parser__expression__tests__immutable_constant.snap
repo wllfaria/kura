@@ -1,5 +1,5 @@
 ---
-source: rmb-parser/src/expression.rs
+source: kura-parser/src/expression.rs
 expression: variables_ast
 ---
 Var {

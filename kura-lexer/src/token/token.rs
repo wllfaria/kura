@@ -1,9 +1,5 @@
-use std::{
-    fmt,
-    ops::{Range, RangeBounds},
-};
-
-use miette::SourceSpan;
+use std::fmt;
+use std::ops::{Range, RangeBounds};
 
 use super::kind::Kind;
 
@@ -11,7 +7,7 @@ pub trait IntoToken<'tok> {
     fn into_token(self, start_byte: usize, end_byte: usize) -> Token<'tok>;
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Location {
     pub start_byte: usize,
     pub end_byte: usize,
@@ -26,18 +22,15 @@ impl Location {
     }
 }
 
-impl From<Location> for SourceSpan {
-    fn from(value: Location) -> Self {
-        SourceSpan::new(value.start_byte.into(), value.end_byte - value.start_byte)
+impl std::fmt::Display for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "start byte: {}, end byte {}", self.start_byte, self.end_byte)
     }
 }
 
 impl From<(usize, usize)> for Location {
     fn from((start_byte, end_byte): (usize, usize)) -> Self {
-        Self {
-            start_byte,
-            end_byte,
-        }
+        Self { start_byte, end_byte }
     }
 }
 

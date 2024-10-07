@@ -1,5 +1,5 @@
 ---
-source: rmb-lexer/src/lib.rs
+source: kura-lexer/src/lib.rs
 expression: calculate_circumference_function
 ---
 [
@@ -312,30 +312,14 @@ expression: calculate_circumference_function
         },
     },
     Token {
-        kind: Return,
-        location: Location {
-            start_byte: 191,
-            end_byte: 197,
-        },
-    },
-    Token {
         kind: Value(
             Ident(
                 "circumference",
             ),
         ),
         location: Location {
-            start_byte: 198,
-            end_byte: 211,
-        },
-    },
-    Token {
-        kind: Op(
-            SemiColon,
-        ),
-        location: Location {
-            start_byte: 211,
-            end_byte: 212,
+            start_byte: 191,
+            end_byte: 204,
         },
     },
     Token {
@@ -343,8 +327,8 @@ expression: calculate_circumference_function
             RightBrace,
         ),
         location: Location {
-            start_byte: 213,
-            end_byte: 214,
+            start_byte: 205,
+            end_byte: 206,
         },
     },
 ]

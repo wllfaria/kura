@@ -1,10 +1,7 @@
-use miette::Error;
-
-use super::{
-    operator::Operator,
-    token::{IntoToken, Token},
-    value::Value,
-};
+use super::operator::Operator;
+use super::token::{IntoToken, Token};
+use super::value::Value;
+use crate::error::Error;
 
 #[derive(Debug, PartialEq)]
 pub enum Kind<'tok> {
@@ -53,7 +50,7 @@ impl<'tok> Kind<'tok> {
             | Kind::Op(Operator::Greater)
             | Kind::Op(Operator::GreaterEqual) => Ok((3, 4)),
             Kind::Op(Operator::Star) | Kind::Op(Operator::Slash) => Ok((5, 6)),
-            _ => miette::bail!("invalid operator with no precedence"),
+            _ => Err(Error::default()),
         }
     }
 

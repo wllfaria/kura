@@ -1,5 +1,5 @@
 ---
-source: rmb-lexer/src/lib.rs
+source: kura-lexer/src/lib.rs
 expression: builtin_identifiers
 ---
 [

@@ -1,5 +1,5 @@
 ---
-source: rmb-parser/src/lib.rs
+source: kura-parser/src/lib.rs
 expression: ast
 ---
 [
@@ -372,17 +372,11 @@ expression: ast
                     end_byte: 1117,
                 },
             },
-            Return {
-                value: Ident {
-                    name: "mutable_value",
-                    location: Location {
-                        start_byte: 1142,
-                        end_byte: 1155,
-                    },
-                },
+            Ident {
+                name: "mutable_value",
                 location: Location {
                     start_byte: 1135,
-                    end_byte: 1156,
+                    end_byte: 1148,
                 },
             },
         ],
@@ -397,7 +391,7 @@ expression: ast
         ),
         location: Location {
             start_byte: 13,
-            end_byte: 1170,
+            end_byte: 1162,
         },
     },
 ]

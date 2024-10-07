@@ -1,19 +1,19 @@
-use miette::{Error, LabeledSpan, SourceSpan};
-
+pub mod error;
 pub mod token;
 
-use token::*;
+use error::Error;
+use token::{FloatSizes, IntSizes, IntoToken, Kind, Operator, Primitive, Token, UIntSizes};
 
-pub trait TransposeRef<'a, T, E> {
-    fn transpose(self) -> Result<Option<&'a T>, E>;
+pub trait TransposeRef<'a, T, E: std::error::Error> {
+    fn transpose(self) -> Result<Option<&'a T>, &'a E>;
 }
 
-impl<'lex> TransposeRef<'lex, Token<'lex>, miette::Report> for Option<&'lex Result<Token<'lex>, miette::Report>> {
-    fn transpose(self) -> Result<Option<&'lex Token<'lex>>, miette::Report> {
+impl<'lex> TransposeRef<'lex, Token<'lex>, Error> for Option<&'lex Result<Token<'lex>, Error>> {
+    fn transpose(self) -> Result<Option<&'lex Token<'lex>>, &'lex Error> {
         match self {
             Some(result) => match result {
                 Ok(token) => Ok(Some(token)),
-                Err(e) => Err(miette::miette!(e.to_string())),
+                Err(e) => Err(e),
             },
             None => Ok(None),
         }
@@ -65,26 +65,14 @@ impl<'lex> Lexer<'lex> {
     pub fn expect(&mut self, expected: Kind<'_>) -> Result<Token<'lex>, Error> {
         let Some(token) = self.next().transpose()? else {
             let location = self.complete_source.len() - 1..self.complete_source.len();
-            return Err(miette::miette! {
-                labels = vec![
-                    LabeledSpan::at(location, format!("syntax error: expected {expected}")),
-                ],
-                "invalid token kind. expected: {expected} but got eof",
-            }
-            .with_source_code(self.complete_source.to_string()));
+            return Err(Error::from(location));
         };
         let kind = &token.kind;
 
         if kind == &expected {
             Ok(token)
         } else {
-            Err(miette::miette! {
-                labels = vec![
-                    LabeledSpan::at(SourceSpan::from(token.location), format!("syntax error: expected {expected}")),
-                ],
-                "invalid token kind. expected: {expected} but got {kind}",
-            }
-            .with_source_code(self.complete_source.to_string()))
+            Err(Error::from(token.location))
         }
     }
 
@@ -296,14 +284,8 @@ impl<'lex> Lexer<'lex> {
             (false, true) => Primitive::Int {
                 value: match literal.parse() {
                     Ok(numeral) => numeral,
-                    Err(e) => {
-                        return Err(miette::miette! {
-                            labels = vec![
-                                LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
-                            ],
-                            "{e}",
-                        }
-                        .with_source_code(self.complete_source.to_string()))
+                    Err(_) => {
+                        return Err(Error::from(self.pos - bytes_eaten..self.pos));
                     }
                 },
                 size: IntSizes::try_from(postfix).ok(),
@@ -311,30 +293,14 @@ impl<'lex> Lexer<'lex> {
             (false, false) => Primitive::UInt {
                 value: match literal.parse() {
                     Ok(numeral) => numeral,
-                    Err(e) => {
-                        return Err(miette::miette! {
-                            labels = vec![
-                                LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
-                            ],
-                            "{e}",
-                        }
-                        .with_source_code(self.complete_source.to_string()))
-                    }
+                    Err(_) => return Err(Error::from(self.pos - bytes_eaten..self.pos)),
                 },
                 size: UIntSizes::try_from(postfix).ok(),
             },
             (true, _) => Primitive::Float {
                 value: match literal.parse() {
                     Ok(numeral) => numeral,
-                    Err(e) => {
-                        return Err(miette::miette! {
-                            labels = vec![
-                                LabeledSpan::at(self.pos - bytes_eaten..self.pos, "this numeric literal"),
-                            ],
-                            "{e}",
-                        }
-                        .with_source_code(self.complete_source.to_string()))
-                    }
+                    Err(_) => return Err(Error::from(self.pos - bytes_eaten..self.pos)),
                 },
                 size: FloatSizes::try_from(postfix).ok(),
             },
@@ -445,7 +411,7 @@ mod tests {
             "   const radius = diameter / 2.0;",
             "   const circumference = 2.0 * pi * radius;",
             "",
-            "   return circumference;",
+            "   circumference",
             "}",
         ];
 
