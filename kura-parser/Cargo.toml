@@ -1,10 +1,10 @@
 [package]
-name = "rmb-lexer"
+name = "kura-parser"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-miette.workspace = true
+kura-lexer.workspace = true
 
 [dev-dependencies]
 insta = "1.39.0"

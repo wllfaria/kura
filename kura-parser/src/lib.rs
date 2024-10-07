@@ -1,12 +1,10 @@
 mod expression;
 
-use rmb_lexer::{
-    token::{FloatSizes, IntSizes, Kind, Location, Operator, Token, UIntSizes},
-    Lexer, TransposeRef,
-};
+use miette::{Error, LabeledSpan, SourceSpan};
+use rmb_lexer::token::{FloatSizes, IntSizes, Kind, Location, Operator, Token, UIntSizes};
+use rmb_lexer::{Lexer, TransposeRef};
 
 use crate::expression::{parse_expression, parse_identifier};
-use miette::{Error, LabeledSpan, SourceSpan};
 
 #[derive(Debug)]
 pub enum Statement<'ast> {
@@ -127,11 +125,7 @@ impl<'par> Parser<'par> {
     pub fn parse(mut self) -> Result<Vec<Statement<'par>>, Error> {
         let mut statements = vec![];
 
-        loop {
-            if self.lexer.is_empty() {
-                break;
-            }
-
+        while !self.lexer.is_empty() {
             let statement = self.parse_statement()?;
             statements.push(statement);
         }
@@ -159,10 +153,7 @@ impl<'par> Parser<'par> {
 
             arguments.push(Statement::FunArgument {
                 name: arg_name,
-                location: Location::new(
-                    arg_name_expr.location().start_byte,
-                    arg_type.location().end_byte,
-                ),
+                location: Location::new(arg_name_expr.location().start_byte, arg_type.location().end_byte),
                 arg_type: Box::new(arg_type),
             });
 
