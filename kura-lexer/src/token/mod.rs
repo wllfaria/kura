@@ -1,7 +1,14 @@
+mod kind;
+mod operator;
+pub mod primitive;
+mod value;
+
 use std::fmt;
 use std::ops::{Range, RangeBounds};
 
-use super::kind::Kind;
+pub use kind::Kind;
+pub use operator::Operator;
+pub use value::Value;
 
 pub trait IntoToken<'tok> {
     fn into_token(self, start_byte: usize, end_byte: usize) -> Token<'tok>;

@@ -36,16 +36,20 @@ Var {
             expressions: [
                 BinaryOp {
                     operator: Plus,
-                    lhs: UintLiteral {
-                        value: 10,
+                    lhs: IntLiteral {
+                        value: Unsigned(
+                            10,
+                        ),
                         size: None,
                         location: Location {
                             start_byte: 76,
                             end_byte: 78,
                         },
                     },
-                    rhs: UintLiteral {
-                        value: 10,
+                    rhs: IntLiteral {
+                        value: Unsigned(
+                            10,
+                        ),
                         size: None,
                         location: Location {
                             start_byte: 81,
@@ -68,16 +72,20 @@ Var {
                 expressions: [
                     BinaryOp {
                         operator: Plus,
-                        lhs: UintLiteral {
-                            value: 20,
+                        lhs: IntLiteral {
+                            value: Unsigned(
+                                20,
+                            ),
                             size: None,
                             location: Location {
                                 start_byte: 121,
                                 end_byte: 123,
                             },
                         },
-                        rhs: UintLiteral {
-                            value: 20,
+                        rhs: IntLiteral {
+                            value: Unsigned(
+                                20,
+                            ),
                             size: None,
                             location: Location {
                                 start_byte: 126,

@@ -8,8 +8,10 @@ Var {
     ty: None,
     value: BinaryOp {
         operator: Plus,
-        lhs: UintLiteral {
-            value: 1,
+        lhs: IntLiteral {
+            value: Unsigned(
+                1,
+            ),
             size: None,
             location: Location {
                 start_byte: 12,
@@ -18,16 +20,20 @@ Var {
         },
         rhs: BinaryOp {
             operator: Star,
-            lhs: UintLiteral {
-                value: 2,
+            lhs: IntLiteral {
+                value: Unsigned(
+                    2,
+                ),
                 size: None,
                 location: Location {
                     start_byte: 16,
                     end_byte: 17,
                 },
             },
-            rhs: UintLiteral {
-                value: 3,
+            rhs: IntLiteral {
+                value: Unsigned(
+                    3,
+                ),
                 size: None,
                 location: Location {
                     start_byte: 20,

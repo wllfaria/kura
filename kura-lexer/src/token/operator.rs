@@ -1,9 +1,7 @@
 use std::fmt;
 
-use super::{
-    kind::Kind,
-    token::{IntoToken, Token},
-};
+use super::kind::Kind;
+use super::{IntoToken, Token};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Operator {

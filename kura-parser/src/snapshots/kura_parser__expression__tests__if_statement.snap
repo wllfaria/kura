@@ -28,16 +28,20 @@ If {
         },
         rhs: BinaryOp {
             operator: NotEqual,
-            lhs: UintLiteral {
-                value: 1,
+            lhs: IntLiteral {
+                value: Unsigned(
+                    1,
+                ),
                 size: None,
                 location: Location {
                     start_byte: 46,
                     end_byte: 47,
                 },
             },
-            rhs: UintLiteral {
-                value: 2,
+            rhs: IntLiteral {
+                value: Unsigned(
+                    2,
+                ),
                 size: None,
                 location: Location {
                     start_byte: 51,
@@ -66,16 +70,20 @@ If {
                 ty: None,
                 value: BinaryOp {
                     operator: Plus,
-                    lhs: UintLiteral {
-                        value: 10,
+                    lhs: IntLiteral {
+                        value: Unsigned(
+                            10,
+                        ),
                         size: None,
                         location: Location {
                             start_byte: 93,
                             end_byte: 95,
                         },
                     },
-                    rhs: UintLiteral {
-                        value: 3,
+                    rhs: IntLiteral {
+                        value: Unsigned(
+                            3,
+                        ),
                         size: None,
                         location: Location {
                             start_byte: 98,
@@ -109,8 +117,10 @@ If {
                         end_byte: 132,
                     },
                 },
-                rhs: UintLiteral {
-                    value: 10,
+                rhs: IntLiteral {
+                    value: Unsigned(
+                        10,
+                    ),
                     size: None,
                     location: Location {
                         start_byte: 136,
@@ -134,16 +144,20 @@ If {
                         ty: None,
                         value: BinaryOp {
                             operator: Plus,
-                            lhs: UintLiteral {
-                                value: 10,
+                            lhs: IntLiteral {
+                                value: Unsigned(
+                                    10,
+                                ),
                                 size: None,
                                 location: Location {
                                     start_byte: 181,
                                     end_byte: 183,
                                 },
                             },
-                            rhs: UintLiteral {
-                                value: 10,
+                            rhs: IntLiteral {
+                                value: Unsigned(
+                                    10,
+                                ),
                                 size: None,
                                 location: Location {
                                     start_byte: 186,
@@ -175,16 +189,20 @@ If {
                             ty: None,
                             value: BinaryOp {
                                 operator: Plus,
-                                lhs: UintLiteral {
-                                    value: 1,
+                                lhs: IntLiteral {
+                                    value: Unsigned(
+                                        1,
+                                    ),
                                     size: None,
                                     location: Location {
                                         start_byte: 239,
                                         end_byte: 240,
                                     },
                                 },
-                                rhs: UintLiteral {
-                                    value: 1,
+                                rhs: IntLiteral {
+                                    value: Unsigned(
+                                        1,
+                                    ),
                                     size: None,
                                     location: Location {
                                         start_byte: 243,

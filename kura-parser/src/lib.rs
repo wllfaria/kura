@@ -1,7 +1,8 @@
 mod expression;
 
 use expression::parse_type_annotation;
-use kura_lexer::token::{FloatSizes, IntSizes, Kind, Location, Operator, Token};
+use kura_lexer::token::primitive::{FloatSizes, IntSizes, Numeral};
+use kura_lexer::token::{Kind, Location, Operator, Token};
 use kura_lexer::{Lexer, TransposeRef};
 
 use crate::expression::{parse_expression, parse_identifier};
@@ -147,18 +148,13 @@ pub enum Expression<'ast> {
         expressions: Vec<Expression<'ast>>,
         location: Location,
     },
-    UintLiteral {
-        value: u64,
-        size: Option<IntSizes>,
-        location: Location,
-    },
     FloatLiteral {
         value: f64,
         size: Option<FloatSizes>,
         location: Location,
     },
     IntLiteral {
-        value: i64,
+        value: Numeral,
         size: Option<IntSizes>,
         location: Location,
     },
@@ -184,7 +180,6 @@ impl Expression<'_> {
             Expression::Block { location, .. } => *location,
             Expression::FunCall { location, .. } => *location,
             Expression::Assign { location, .. } => *location,
-            Expression::UintLiteral { location, .. } => *location,
             Expression::Return { location, .. } => *location,
             Expression::FloatLiteral { location, .. } => *location,
             Expression::IntLiteral { location, .. } => *location,

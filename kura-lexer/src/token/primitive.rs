@@ -1,8 +1,39 @@
 use core::fmt;
+use std::fmt::Display;
 
 use super::kind::Kind;
-use super::token::{IntoToken, Token};
 use super::value::Value;
+use super::{IntoToken, Token};
+
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+pub enum Numeral {
+    Signed(i64),
+    Unsigned(u64),
+}
+
+impl Display for Numeral {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Numeral::Signed(val) => write!(f, "{val}"),
+            Numeral::Unsigned(val) => write!(f, "{val}"),
+        }
+    }
+}
+
+pub trait IntoNumeral {
+    fn parse_unsigned(self) -> Result<Numeral, std::num::ParseIntError>;
+    fn parse_signed(self) -> Result<Numeral, std::num::ParseIntError>;
+}
+
+impl<S: AsRef<str>> IntoNumeral for S {
+    fn parse_unsigned(self) -> Result<Numeral, std::num::ParseIntError> {
+        Ok(Numeral::Unsigned(self.as_ref().parse()?))
+    }
+
+    fn parse_signed(self) -> Result<Numeral, std::num::ParseIntError> {
+        Ok(Numeral::Signed(self.as_ref().parse()?))
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum FloatSizes {
@@ -31,6 +62,22 @@ pub enum IntSizes {
     I32,
     I64,
     Isize,
+}
+
+impl IntSizes {
+    pub fn is_unsigned(&self) -> bool {
+        matches!(
+            self,
+            IntSizes::U8 | IntSizes::U16 | IntSizes::U32 | IntSizes::U64 | IntSizes::Usize
+        )
+    }
+
+    pub fn is_signed(&self) -> bool {
+        matches!(
+            self,
+            IntSizes::I8 | IntSizes::I16 | IntSizes::I32 | IntSizes::I64 | IntSizes::Isize
+        )
+    }
 }
 
 impl fmt::Display for IntSizes {
@@ -85,8 +132,7 @@ impl TryFrom<&str> for FloatSizes {
 #[derive(Debug, PartialEq)]
 pub enum Primitive {
     Bool(bool),
-    UInt { value: u64, size: Option<IntSizes> },
-    Int { value: i64, size: Option<IntSizes> },
+    Int { value: Numeral, size: Option<IntSizes> },
     Float { value: f64, size: Option<FloatSizes> },
 }
 
@@ -94,12 +140,6 @@ impl fmt::Display for Primitive {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Primitive::Bool(b) => write!(f, "{b}"),
-            Primitive::UInt { value, size } => write!(
-                f,
-                "{}{}",
-                value,
-                size.as_ref().map(|s| s.to_string()).unwrap_or_default()
-            ),
             Primitive::Float { value, size } => write!(
                 f,
                 "{}{}",

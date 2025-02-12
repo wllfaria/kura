@@ -20,8 +20,10 @@ expression: numerals
     Token {
         kind: Value(
             Primitive(
-                UInt {
-                    value: 1234567890,
+                Int {
+                    value: Unsigned(
+                        1234567890,
+                    ),
                     size: None,
                 },
             ),
@@ -62,8 +64,10 @@ expression: numerals
     Token {
         kind: Value(
             Primitive(
-                UInt {
-                    value: 9876543210,
+                Int {
+                    value: Unsigned(
+                        9876543210,
+                    ),
                     size: None,
                 },
             ),
@@ -76,8 +80,10 @@ expression: numerals
     Token {
         kind: Value(
             Primitive(
-                UInt {
-                    value: 9876543210,
+                Int {
+                    value: Unsigned(
+                        9876543210,
+                    ),
                     size: None,
                 },
             ),
@@ -133,7 +139,9 @@ expression: numerals
         kind: Value(
             Primitive(
                 Int {
-                    value: -1234567890,
+                    value: Signed(
+                        -1234567890,
+                    ),
                     size: None,
                 },
             ),
@@ -147,7 +155,9 @@ expression: numerals
         kind: Value(
             Primitive(
                 Int {
-                    value: -9876543210,
+                    value: Signed(
+                        -9876543210,
+                    ),
                     size: None,
                 },
             ),
@@ -161,7 +171,9 @@ expression: numerals
         kind: Value(
             Primitive(
                 Int {
-                    value: -9876543210,
+                    value: Signed(
+                        -9876543210,
+                    ),
                     size: None,
                 },
             ),
@@ -175,7 +187,9 @@ expression: numerals
         kind: Value(
             Primitive(
                 Int {
-                    value: -9876,
+                    value: Signed(
+                        -9876,
+                    ),
                     size: None,
                 },
             ),
@@ -189,7 +203,9 @@ expression: numerals
         kind: Value(
             Primitive(
                 Int {
-                    value: -5,
+                    value: Signed(
+                        -5,
+                    ),
                     size: None,
                 },
             ),
@@ -203,7 +219,9 @@ expression: numerals
         kind: Value(
             Primitive(
                 Int {
-                    value: -43210,
+                    value: Signed(
+                        -43210,
+                    ),
                     size: None,
                 },
             ),
@@ -217,7 +235,9 @@ expression: numerals
         kind: Value(
             Primitive(
                 Int {
-                    value: -123456789,
+                    value: Signed(
+                        -123456789,
+                    ),
                     size: Some(
                         I32,
                     ),
@@ -232,8 +252,10 @@ expression: numerals
     Token {
         kind: Value(
             Primitive(
-                UInt {
-                    value: 123456789,
+                Int {
+                    value: Unsigned(
+                        123456789,
+                    ),
                     size: Some(
                         Usize,
                     ),
@@ -281,7 +303,9 @@ expression: numerals
         kind: Value(
             Primitive(
                 Int {
-                    value: -12,
+                    value: Signed(
+                        -12,
+                    ),
                     size: None,
                 },
             ),

@@ -1,4 +1,5 @@
-use kura_lexer::token::{Kind, Location, Operator, Primitive, Token, Value};
+use kura_lexer::token::primitive::Primitive;
+use kura_lexer::token::{Kind, Location, Operator, Token, Value};
 use kura_lexer::{Lexer, TransposeRef};
 
 use crate::{Expression, Type};
@@ -365,7 +366,6 @@ fn parse_primitive<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'pa
 
     match primitive {
         Primitive::Int { value, size } => Ok(Expression::IntLiteral { value, size, location }),
-        Primitive::UInt { value, size } => Ok(Expression::UintLiteral { value, size, location }),
         Primitive::Float { value, size } => Ok(Expression::FloatLiteral { value, size, location }),
         Primitive::Bool(value) => Ok(Expression::Bool { value, location }),
     }

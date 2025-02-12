@@ -1,6 +1,6 @@
 use super::operator::Operator;
-use super::token::{IntoToken, Token};
 use super::value::Value;
+use super::{IntoToken, Token};
 use crate::error::Error;
 
 #[derive(Debug, PartialEq)]

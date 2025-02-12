@@ -6,8 +6,10 @@ BinaryOp {
     operator: Minus,
     lhs: BinaryOp {
         operator: Plus,
-        lhs: UintLiteral {
-            value: 1,
+        lhs: IntLiteral {
+            value: Unsigned(
+                1,
+            ),
             size: None,
             location: Location {
                 start_byte: 0,
@@ -16,16 +18,20 @@ BinaryOp {
         },
         rhs: BinaryOp {
             operator: Star,
-            lhs: UintLiteral {
-                value: 2,
+            lhs: IntLiteral {
+                value: Unsigned(
+                    2,
+                ),
                 size: None,
                 location: Location {
                     start_byte: 4,
                     end_byte: 5,
                 },
             },
-            rhs: UintLiteral {
-                value: 3,
+            rhs: IntLiteral {
+                value: Unsigned(
+                    3,
+                ),
                 size: None,
                 location: Location {
                     start_byte: 8,
@@ -42,8 +48,10 @@ BinaryOp {
             end_byte: 9,
         },
     },
-    rhs: UintLiteral {
-        value: 4,
+    rhs: IntLiteral {
+        value: Unsigned(
+            4,
+        ),
         size: None,
         location: Location {
             start_byte: 12,

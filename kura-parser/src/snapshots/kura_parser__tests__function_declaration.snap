@@ -127,8 +127,10 @@ expression: ast
                             mutable: false,
                             name: "something",
                             ty: None,
-                            value: UintLiteral {
-                                value: 10,
+                            value: IntLiteral {
+                                value: Unsigned(
+                                    10,
+                                ),
                                 size: None,
                                 location: Location {
                                     start_byte: 312,
@@ -149,8 +151,10 @@ expression: ast
                                     Return {
                                         value: BinaryOp {
                                             operator: Plus,
-                                            lhs: UintLiteral {
-                                                value: 10,
+                                            lhs: IntLiteral {
+                                                value: Unsigned(
+                                                    10,
+                                                ),
                                                 size: None,
                                                 location: Location {
                                                     start_byte: 388,
@@ -159,16 +163,20 @@ expression: ast
                                             },
                                             rhs: BinaryOp {
                                                 operator: Star,
-                                                lhs: UintLiteral {
-                                                    value: 3,
+                                                lhs: IntLiteral {
+                                                    value: Unsigned(
+                                                        3,
+                                                    ),
                                                     size: None,
                                                     location: Location {
                                                         start_byte: 393,
                                                         end_byte: 394,
                                                     },
                                                 },
-                                                rhs: UintLiteral {
-                                                    value: 4,
+                                                rhs: IntLiteral {
+                                                    value: Unsigned(
+                                                        4,
+                                                    ),
                                                     size: None,
                                                     location: Location {
                                                         start_byte: 397,
@@ -203,8 +211,10 @@ expression: ast
                         },
                         BinaryOp {
                             operator: Plus,
-                            lhs: UintLiteral {
-                                value: 10,
+                            lhs: IntLiteral {
+                                value: Unsigned(
+                                    10,
+                                ),
                                 size: None,
                                 location: Location {
                                     start_byte: 500,

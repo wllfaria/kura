@@ -2,7 +2,8 @@ pub mod error;
 pub mod token;
 
 use error::Error;
-use token::{FloatSizes, IntSizes, IntoToken, Kind, Operator, Primitive, Token};
+use token::primitive::{FloatSizes, IntSizes, IntoNumeral, Primitive};
+use token::{IntoToken, Kind, Operator, Token};
 
 pub trait TransposeRef<'a, T, E: std::error::Error> {
     fn transpose(self) -> Result<Option<&'a T>, &'a E>;
@@ -282,7 +283,7 @@ impl<'lex> Lexer<'lex> {
         let is_float = literal.contains('.');
         let token = match (is_float, is_signed) {
             (false, true) => Primitive::Int {
-                value: match literal.parse() {
+                value: match literal.as_str().parse_signed() {
                     Ok(numeral) => numeral,
                     Err(_) => {
                         return Err(Error::from(self.pos - bytes_eaten..self.pos));
@@ -290,8 +291,8 @@ impl<'lex> Lexer<'lex> {
                 },
                 size: IntSizes::try_from(postfix).ok(),
             },
-            (false, false) => Primitive::UInt {
-                value: match literal.parse() {
+            (false, false) => Primitive::Int {
+                value: match literal.as_str().parse_unsigned() {
                     Ok(numeral) => numeral,
                     Err(_) => return Err(Error::from(self.pos - bytes_eaten..self.pos)),
                 },
@@ -308,7 +309,6 @@ impl<'lex> Lexer<'lex> {
 
         let has_size = match &token {
             Primitive::Int { size, .. } => size.is_some(),
-            Primitive::UInt { size, .. } => size.is_some(),
             Primitive::Float { size, .. } => size.is_some(),
             _ => unreachable!(),
         };
