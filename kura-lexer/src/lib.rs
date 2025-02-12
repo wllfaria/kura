@@ -2,7 +2,7 @@ pub mod error;
 pub mod token;
 
 use error::Error;
-use token::{FloatSizes, IntSizes, IntoToken, Kind, Operator, Primitive, Token, UIntSizes};
+use token::{FloatSizes, IntSizes, IntoToken, Kind, Operator, Primitive, Token};
 
 pub trait TransposeRef<'a, T, E: std::error::Error> {
     fn transpose(self) -> Result<Option<&'a T>, &'a E>;
@@ -130,7 +130,7 @@ impl<'lex> Iterator for Lexer<'lex> {
                 ('-', Some(c)) if c.is_numeric() => Some(self.lex_numerals()),
                 // we ignore a comment until the end of the line
                 ('/', Some('/')) => {
-                    let eol_location = self.source.find(|c| matches!(c, '\n')).unwrap_or(self.source.len());
+                    let eol_location = self.source.find('\n').unwrap_or(self.source.len());
                     self.advance_by(eol_location);
                     continue;
                 }
@@ -295,7 +295,7 @@ impl<'lex> Lexer<'lex> {
                     Ok(numeral) => numeral,
                     Err(_) => return Err(Error::from(self.pos - bytes_eaten..self.pos)),
                 },
-                size: UIntSizes::try_from(postfix).ok(),
+                size: IntSizes::try_from(postfix).ok(),
             },
             (true, _) => Primitive::Float {
                 value: match literal.parse() {
@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn lexing_builtin_identifiers() {
-        let source = ["var", "const", "match", "if", "else", "fun", "struct", "enum", "return"];
+        let source = ["var", "const", "if", "else", "fun", "struct", "return"];
 
         let source = source.join(" ");
 

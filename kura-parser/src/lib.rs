@@ -1,22 +1,107 @@
 mod expression;
 
-use kura_lexer::token::{FloatSizes, IntSizes, Kind, Location, Operator, Token, UIntSizes};
+use expression::parse_type_annotation;
+use kura_lexer::token::{FloatSizes, IntSizes, Kind, Location, Operator, Token};
 use kura_lexer::{Lexer, TransposeRef};
 
 use crate::expression::{parse_expression, parse_identifier};
 
+static PRIMITIVE_MAP: &[(&str, PrimitiveType)] = &[
+    ("u8", PrimitiveType::U8),
+    ("u16", PrimitiveType::U16),
+    ("u32", PrimitiveType::U32),
+    ("u64", PrimitiveType::U64),
+    ("i8", PrimitiveType::I8),
+    ("i16", PrimitiveType::I16),
+    ("i32", PrimitiveType::I32),
+    ("i64", PrimitiveType::I64),
+    ("bool", PrimitiveType::Bool),
+    ("f32", PrimitiveType::F32),
+    ("f64", PrimitiveType::F64),
+];
+
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum PrimitiveType {
+    #[default]
+    Unit,
+    U8,
+    U16,
+    U32,
+    U64,
+    Usize,
+    I8,
+    I16,
+    I32,
+    I64,
+    Isize,
+    Bool,
+    F32,
+    F64,
+}
+
+impl From<IntSizes> for PrimitiveType {
+    fn from(size: IntSizes) -> Self {
+        match size {
+            IntSizes::I8 => PrimitiveType::I8,
+            IntSizes::I16 => PrimitiveType::I16,
+            IntSizes::I32 => PrimitiveType::I32,
+            IntSizes::I64 => PrimitiveType::I64,
+            IntSizes::Isize => PrimitiveType::Isize,
+            IntSizes::U8 => PrimitiveType::U8,
+            IntSizes::U16 => PrimitiveType::U16,
+            IntSizes::U32 => PrimitiveType::U32,
+            IntSizes::U64 => PrimitiveType::U64,
+            IntSizes::Usize => PrimitiveType::Usize,
+        }
+    }
+}
+
+impl From<FloatSizes> for PrimitiveType {
+    fn from(size: FloatSizes) -> Self {
+        match size {
+            FloatSizes::F32 => PrimitiveType::F32,
+            FloatSizes::F64 => PrimitiveType::F64,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum Type<'ast> {
+    Primitive { ty: PrimitiveType, location: Location },
+    Defined { name: &'ast str, location: Location },
+}
+
+impl<'ast> Type<'ast> {
+    fn from_identifier(name: &'ast str, location: Location) -> Self {
+        if let Some((_, ty)) = PRIMITIVE_MAP.iter().find(|(n, _)| name == *n) {
+            return Type::Primitive { ty: *ty, location };
+        };
+
+        Type::Defined { name, location }
+    }
+
+    fn location(&self) -> Location {
+        match self {
+            Self::Primitive { location, .. } => *location,
+            Self::Defined { location, .. } => *location,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct FunArgument<'ast> {
+    pub name: &'ast str,
+    pub ty: Type<'ast>,
+    pub location: Location,
+}
+
 #[derive(Debug)]
 pub enum Statement<'ast> {
-    FunArgument {
-        name: &'ast str,
-        arg_type: Box<Expression<'ast>>,
-        location: Location,
-    },
     Fun {
         name: &'ast str,
-        arguments: Vec<Statement<'ast>>,
+        arguments: Vec<FunArgument<'ast>>,
         body: Vec<Expression<'ast>>,
-        return_type: Option<Box<Expression<'ast>>>,
+        return_type: Option<Type<'ast>>,
         location: Location,
     },
 }
@@ -26,7 +111,7 @@ pub enum Expression<'ast> {
     Var {
         mutable: bool,
         name: &'ast str,
-        typ: Option<Box<Expression<'ast>>>,
+        ty: Option<Type<'ast>>,
         value: Box<Expression<'ast>>,
         location: Location,
     },
@@ -45,7 +130,7 @@ pub enum Expression<'ast> {
         falsy: Vec<Expression<'ast>>,
     },
     FunCall {
-        ident: Box<Expression<'ast>>,
+        ident: &'ast str,
         location: Location,
         arguments: Vec<Expression<'ast>>,
     },
@@ -64,7 +149,7 @@ pub enum Expression<'ast> {
     },
     UintLiteral {
         value: u64,
-        size: Option<UIntSizes>,
+        size: Option<IntSizes>,
         location: Location,
     },
     FloatLiteral {
@@ -139,7 +224,7 @@ impl<'par> Parser<'par> {
         }
     }
 
-    fn parse_function_args(&mut self, _: &Token<'_>) -> Result<Vec<Statement<'par>>, String> {
+    fn parse_function_args(&mut self, _: &Token<'_>) -> Result<Vec<FunArgument<'par>>, String> {
         let mut arguments = vec![];
 
         loop {
@@ -147,12 +232,13 @@ impl<'par> Parser<'par> {
             self.lexer
                 .expect(Kind::Op(Operator::Colon))
                 .map_err(|e| e.to_string())?;
-            let (arg_type, _) = parse_identifier(&mut self.lexer)?;
 
-            arguments.push(Statement::FunArgument {
+            let arg_type = parse_type_annotation(&mut self.lexer)?;
+
+            arguments.push(FunArgument {
                 name: arg_name,
                 location: Location::new(arg_name_expr.location().start_byte, arg_type.location().end_byte),
-                arg_type: Box::new(arg_type),
+                ty: arg_type,
             });
 
             match self.lexer.peek().transpose().map_err(|e| e.to_string())? {
@@ -197,8 +283,8 @@ impl<'par> Parser<'par> {
 
         let return_type = if has_return {
             self.lexer.next().transpose().map_err(|e| e.to_string())?;
-            let (identifier, _) = parse_identifier(&mut self.lexer)?;
-            Some(Box::new(identifier))
+            let return_type = parse_type_annotation(&mut self.lexer)?;
+            Some(return_type)
         } else {
             None
         };
@@ -255,9 +341,11 @@ mod tests {
                     var nesting_more = {
                         return 10 + 3 * 4;
                     };
-                    return 10 + something;
+
+                    // returning on the last expresison
+                    10 + something
                 };
-            
+
                 circumference
             }"#;
 
@@ -274,9 +362,9 @@ mod tests {
         let source = r#"
             fun some_function_name(argument: TypeOfArg) => ReturnType {
                 const immutable_var = if truthy_val {
-                    return 10;
+                    10
                 } else if another_truthy == 10 {
-                    return 20 + 3 * 2;
+                    20 + 3 * 2
                 } else {
                     const my_inner_var: f64 = 100; // comments don't matter
                     // this would be invalid when we do type checking
@@ -284,10 +372,10 @@ mod tests {
                 };
 
                 /*
-                 * we also have multiline comments! 
+                 * we also have multiline comments!
                     /* Although both regular
                      * and multiline comments will never appear on the parser
-                     * ast, as they are ignored on the lexer 
+                     * ast, as they are ignored on the lexer
                      **/
                  **/
 

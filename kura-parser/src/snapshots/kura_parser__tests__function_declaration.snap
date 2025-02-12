@@ -8,8 +8,8 @@ expression: ast
         arguments: [
             FunArgument {
                 name: "diameter",
-                arg_type: Ident {
-                    name: "f64",
+                ty: Primitive {
+                    ty: F64,
                     location: Location {
                         start_byte: 51,
                         end_byte: 54,
@@ -25,7 +25,7 @@ expression: ast
             Var {
                 mutable: false,
                 name: "pi",
-                typ: None,
+                ty: None,
                 value: FloatLiteral {
                     value: 3.141592653589793,
                     size: Some(
@@ -44,7 +44,7 @@ expression: ast
             Var {
                 mutable: false,
                 name: "radius",
-                typ: None,
+                ty: None,
                 value: BinaryOp {
                     operator: Slash,
                     lhs: Ident {
@@ -75,7 +75,7 @@ expression: ast
             Var {
                 mutable: false,
                 name: "circumference",
-                typ: None,
+                ty: None,
                 value: BinaryOp {
                     operator: Star,
                     lhs: BinaryOp {
@@ -120,13 +120,13 @@ expression: ast
             Var {
                 mutable: false,
                 name: "nesting",
-                typ: None,
+                ty: None,
                 value: Block {
                     expressions: [
                         Var {
                             mutable: false,
                             name: "something",
-                            typ: None,
+                            ty: None,
                             value: UintLiteral {
                                 value: 10,
                                 size: None,
@@ -143,7 +143,7 @@ expression: ast
                         Var {
                             mutable: true,
                             name: "nesting_more",
-                            typ: None,
+                            ty: None,
                             value: Block {
                                 expressions: [
                                     Return {
@@ -201,56 +201,50 @@ expression: ast
                                 end_byte: 421,
                             },
                         },
-                        Return {
-                            value: BinaryOp {
-                                operator: Plus,
-                                lhs: UintLiteral {
-                                    value: 10,
-                                    size: None,
-                                    location: Location {
-                                        start_byte: 450,
-                                        end_byte: 452,
-                                    },
-                                },
-                                rhs: Ident {
-                                    name: "something",
-                                    location: Location {
-                                        start_byte: 455,
-                                        end_byte: 464,
-                                    },
-                                },
+                        BinaryOp {
+                            operator: Plus,
+                            lhs: UintLiteral {
+                                value: 10,
+                                size: None,
                                 location: Location {
-                                    start_byte: 450,
-                                    end_byte: 464,
+                                    start_byte: 500,
+                                    end_byte: 502,
+                                },
+                            },
+                            rhs: Ident {
+                                name: "something",
+                                location: Location {
+                                    start_byte: 505,
+                                    end_byte: 514,
                                 },
                             },
                             location: Location {
-                                start_byte: 443,
-                                end_byte: 465,
+                                start_byte: 500,
+                                end_byte: 514,
                             },
                         },
                     ],
                     location: Location {
                         start_byte: 272,
-                        end_byte: 483,
+                        end_byte: 532,
                     },
                 },
                 location: Location {
                     start_byte: 256,
-                    end_byte: 483,
+                    end_byte: 532,
                 },
             },
             Ident {
                 name: "circumference",
                 location: Location {
-                    start_byte: 514,
-                    end_byte: 527,
+                    start_byte: 551,
+                    end_byte: 564,
                 },
             },
         ],
         return_type: Some(
-            Ident {
-                name: "f64",
+            Primitive {
+                ty: F64,
                 location: Location {
                     start_byte: 59,
                     end_byte: 62,
@@ -259,7 +253,7 @@ expression: ast
         ),
         location: Location {
             start_byte: 13,
-            end_byte: 541,
+            end_byte: 578,
         },
     },
 ]

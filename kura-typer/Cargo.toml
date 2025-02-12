@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 kura-parser.workspace = true
+kura-lexer.workspace = true

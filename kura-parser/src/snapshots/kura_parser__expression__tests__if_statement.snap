@@ -63,7 +63,7 @@ If {
             Var {
                 mutable: false,
                 name: "this_is_a_var",
-                typ: None,
+                ty: None,
                 value: BinaryOp {
                     operator: Plus,
                     lhs: UintLiteral {
@@ -131,7 +131,7 @@ If {
                     Var {
                         mutable: false,
                         name: "this_is_another",
-                        typ: None,
+                        ty: None,
                         value: BinaryOp {
                             operator: Plus,
                             lhs: UintLiteral {
@@ -172,7 +172,7 @@ If {
                         Var {
                             mutable: false,
                             name: "omg",
-                            typ: None,
+                            ty: None,
                             value: BinaryOp {
                                 operator: Plus,
                                 lhs: UintLiteral {

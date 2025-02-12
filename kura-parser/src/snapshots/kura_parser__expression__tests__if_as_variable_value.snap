@@ -5,7 +5,7 @@ expression: let_if_ast
 Var {
     mutable: false,
     name: "my_var",
-    typ: None,
+    ty: None,
     value: If {
         condition: BinaryOp {
             operator: EqualEqual,

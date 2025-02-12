@@ -1,7 +1,7 @@
 use kura_lexer::token::{Kind, Location, Operator, Primitive, Token, Value};
 use kura_lexer::{Lexer, TransposeRef};
 
-use crate::Expression;
+use crate::{Expression, Type};
 
 mod precedences {
     pub const BASE: u8 = 0;
@@ -85,10 +85,12 @@ fn parse_variable<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'par
 
     let (_, name) = parse_identifier(lexer)?;
 
-    let typ = match lexer.peek().transpose().map_err(|e| e.to_string())? {
+    let ty = match lexer.peek().transpose().map_err(|e| e.to_string())? {
         Some(token) if matches!(token.kind, Kind::Op(Operator::Colon)) => {
+            // if we find a `:` we consume it as we are only interested in the actual
+            // type annotation
             lexer.next().transpose().map_err(|e| e.to_string())?;
-            Some(parse_identifier(lexer)?)
+            Some(parse_type_annotation(lexer)?)
         }
         _ => None,
     };
@@ -108,7 +110,7 @@ fn parse_variable<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'par
     let location = Location::new(keyword.location.start_byte, value.location().end_byte);
     Ok(Expression::Var {
         mutable,
-        typ: typ.map(|(typ, _)| Box::new(typ)),
+        ty,
         name,
         value: Box::new(value),
         location,
@@ -236,13 +238,22 @@ fn parse_fun_call<'parser>(
         lexer.expect(Kind::Op(Operator::SemiColon)).map_err(|e| e.to_string())?;
     }
 
+    let Expression::Ident { name, .. } = ident else { unreachable!() };
+
     let location = ident.location().start_byte..close_paren.location.end_byte;
     let expr = Expression::FunCall {
-        ident: Box::new(ident),
+        ident: name,
         location: location.into(),
         arguments,
     };
     Ok(expr)
+}
+
+pub fn parse_type_annotation<'parser>(lexer: &mut Lexer<'parser>) -> Result<Type<'parser>, String> {
+    let (type_exp, type_name) = parse_identifier(lexer)?;
+    let location = type_exp.location();
+    let arg_type = Type::from_identifier(type_name, location);
+    Ok(arg_type)
 }
 
 fn parse_assign<'parser>(lexer: &mut Lexer<'parser>, left: Expression<'parser>) -> Result<Expression<'parser>, String> {

@@ -8,6 +8,6 @@ mod value;
 
 pub use kind::Kind;
 pub use operator::Operator;
-pub use primitive::{FloatSizes, IntSizes, Primitive, UIntSizes};
+pub use primitive::{FloatSizes, IntSizes, Primitive};
 pub use token::{IntoToken, Location, Token};
 pub use value::Value;
