@@ -25,24 +25,18 @@ fn get_precedence(operator: Operator) -> u8 {
 }
 
 pub fn parse_expression<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    match lexer.peek().transpose().map_err(ToString::to_string)? {
-        Some(token) => match token.kind {
-            Kind::Var | Kind::Const => parse_variable(lexer),
-            _ => parse_with_precedence(lexer, precedences::BASE),
-        },
+    match peek!(lexer) {
+        Some(token) if matches!(token.kind, Kind::Var | Kind::Const) => parse_variable(lexer),
+        Some(_) => parse_with_precedence(lexer, precedences::BASE),
         None => unreachable!(),
     }
 }
 
 pub fn parse_identifier<'parser>(lexer: &mut Lexer<'parser>) -> Result<(Expression<'parser>, &'parser str), String> {
-    let name_and_loc = lexer
-        .next()
-        .transpose()
-        .map_err(|e| e.to_string())?
-        .map(|token| match token.kind {
-            Kind::Value(Value::Ident(name)) => (name, token.location),
-            _ => ("", token.location),
-        });
+    let name_and_loc = consume!(lexer).map(|token| match token.kind {
+        Kind::Value(Value::Ident(name)) => (name, token.location),
+        _ => ("", token.location),
+    });
 
     match name_and_loc {
         Some(("", location)) => {
@@ -57,13 +51,11 @@ pub fn parse_expr_block<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expressio
     let mut expressions = vec![];
     let mut trailing_expr = None;
 
-    let block_start = lexer.expect(Kind::Op(Operator::LeftBrace)).map_err(|e| e.to_string())?;
+    let block_start = expect!(lexer, Kind::Op(Operator::LeftBrace));
 
     loop {
-        match lexer.peek().transpose().map_err(|e| e.to_string())? {
-            Some(token) if matches!(token.kind, Kind::Op(Operator::RightBrace)) => {
-                break;
-            }
+        match peek!(lexer) {
+            Some(token) if matches!(token.kind, Kind::Op(Operator::RightBrace)) => break,
             None => break,
             _ => (),
         }
@@ -75,7 +67,7 @@ pub fn parse_expr_block<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expressio
         //
         // if there is a expression without a semicolon that is not at the end of the block, that
         // is a syntax error.
-        match lexer.peek().transpose().map_err(|e| e.to_string())? {
+        match peek!(lexer) {
             Some(token) if matches!(token.kind, Kind::Op(Operator::SemiColon)) => {
                 // consume the expression semicolon
                 lexer.next().transpose().map_err(|e| e.to_string())?;
@@ -89,10 +81,7 @@ pub fn parse_expr_block<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expressio
         }
     }
 
-    let block_end = lexer
-        .expect(Kind::Op(Operator::RightBrace))
-        .map_err(|e| e.to_string())?;
-
+    let block_end = expect!(lexer, Kind::Op(Operator::RightBrace));
     let location = block_start.location.start_byte..block_end.location.end_byte;
     Ok(Expression::Block {
         body: expressions,
@@ -133,22 +122,15 @@ fn parse_if_expression<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression
     let keyword = lexer.expect(Kind::If).map_err(|e| e.to_string())?;
 
     let condition = parse_expression(lexer)?;
-
     let body = parse_expr_block(lexer)?;
 
     let mut falsy_branches = vec![];
 
-    while let Some(keyword) = lexer.peek().transpose().map_err(|e| e.to_string())? {
+    while let Some(keyword) = peek!(lexer) {
         if keyword.kind == Kind::Else {
-            lexer.next().transpose().map_err(|e| e.to_string())?;
+            consume!(lexer);
 
-            if lexer
-                .peek()
-                .transpose()
-                .map_err(|e| e.to_string())?
-                .map(|t| matches!(t.kind, Kind::If))
-                .unwrap_or(false)
-            {
+            if peek_matches!(lexer, Kind::If) {
                 let else_if = parse_if_expression(lexer)?;
                 falsy_branches.push(else_if);
             } else {
@@ -176,7 +158,7 @@ fn parse_if_expression<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression
 }
 
 fn parse_value<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    let Some(Token { kind, .. }) = lexer.peek().transpose().map_err(|e| e.to_string())? else {
+    let Some(Token { kind, .. }) = peek!(lexer) else {
         unreachable!();
     };
 
@@ -192,7 +174,7 @@ fn parse_value<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser
 }
 
 fn parse_operation<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    let Some(Token { kind, .. }) = lexer.peek().transpose().map_err(|e| e.to_string())? else {
+    let Some(Token { kind, .. }) = peek!(lexer) else {
         unreachable!();
     };
 
@@ -202,11 +184,10 @@ fn parse_operation<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'pa
 
     match op {
         Operator::LeftParen => {
-            lexer.next().transpose().map_err(|e| e.to_string())?;
+            consume!(lexer);
             let left = parse_with_precedence(lexer, precedences::BASE)?;
-            lexer
-                .expect(Kind::Op(Operator::RightParen))
-                .map_err(|e| e.to_string())?;
+            expect!(lexer, Kind::Op(Operator::RightParen));
+
             Ok(left)
         }
         Operator::LeftBrace => parse_expr_block(lexer),
@@ -218,12 +199,12 @@ fn parse_fun_call<'parser>(
     lexer: &mut Lexer<'parser>,
     ident: Expression<'parser>,
 ) -> Result<Expression<'parser>, String> {
-    lexer.expect(Kind::Op(Operator::LeftParen)).map_err(|e| e.to_string())?;
+    consume!(lexer);
 
     let mut arguments = vec![];
 
     loop {
-        match lexer.peek().transpose().map_err(|e| e.to_string())? {
+        match peek!(lexer) {
             Some(token) if matches!(token.kind, Kind::Op(Operator::RightParen)) => {
                 break;
             }
@@ -240,9 +221,7 @@ fn parse_fun_call<'parser>(
         arguments.push(arg);
     }
 
-    let close_paren = lexer
-        .expect(Kind::Op(Operator::RightParen))
-        .map_err(|e| e.to_string())?;
+    let close_paren = expect!(lexer, Kind::Op(Operator::RightParen));
 
     let Expression::Ident { name, .. } = ident else { unreachable!() };
 
@@ -269,9 +248,9 @@ pub fn parse_type_annotation<'parser>(lexer: &mut Lexer<'parser>) -> Result<Type
 }
 
 fn parse_assign<'parser>(lexer: &mut Lexer<'parser>, left: Expression<'parser>) -> Result<Expression<'parser>, String> {
-    lexer.expect(Kind::Op(Operator::Equal)).map_err(|e| e.to_string())?;
+    expect!(lexer, Kind::Op(Operator::Equal));
 
-    let value = match lexer.peek().transpose().map_err(|e| e.to_string())? {
+    let value = match peek!(lexer) {
         Some(token) if matches!(token.kind, Kind::Op(Operator::LeftBrace)) => parse_expr_block(lexer)?,
         Some(_) => parse_expression(lexer)?,
         _ => unreachable!(),
@@ -290,19 +269,17 @@ fn parse_with_precedence<'parser>(
     lexer: &mut Lexer<'parser>,
     min_precedence: u8,
 ) -> Result<Expression<'parser>, String> {
-    let mut left = match lexer.peek().transpose().map_err(|e| e.to_string())? {
-        Some(token) => match &token.kind {
-            Kind::Value(_) => parse_value(lexer)?,
-            Kind::Op(_) => parse_operation(lexer)?,
-            Kind::Return => parse_return_expression(lexer)?,
-            Kind::If => parse_if_expression(lexer)?,
-            t => todo!("{t:?}"),
-        },
+    let mut left = match peek!(lexer) {
+        Some(token) if matches!(token.kind, Kind::Value(_)) => parse_value(lexer)?,
+        Some(token) if matches!(token.kind, Kind::Op(_)) => parse_operation(lexer)?,
+        Some(token) if matches!(token.kind, Kind::Return) => parse_return_expression(lexer)?,
+        Some(token) if matches!(token.kind, Kind::If) => parse_if_expression(lexer)?,
+        Some(token) => todo!("{token:?}"),
         None => todo!(),
     };
 
     if let Expression::Ident { .. } = left {
-        match lexer.peek().transpose().map_err(|e| e.to_string())? {
+        match peek!(lexer) {
             Some(token) if matches!(token.kind, Kind::Op(Operator::LeftParen)) => {
                 return parse_fun_call(lexer, left);
             }
@@ -312,7 +289,7 @@ fn parse_with_precedence<'parser>(
     }
 
     loop {
-        let Some(next) = lexer.peek().transpose().map_err(|e| e.to_string())? else {
+        let Some(next) = peek!(lexer) else {
             return Ok(left);
         };
 
@@ -330,7 +307,7 @@ fn parse_with_precedence<'parser>(
             break;
         }
 
-        let Some(_) = lexer.next().transpose().map_err(|e| e.to_string())? else {
+        let Some(_) = consume!(lexer) else {
             unreachable!();
         };
 
@@ -349,11 +326,11 @@ fn parse_with_precedence<'parser>(
 }
 
 fn parse_return_expression<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    let keyword = lexer.expect(Kind::Return).map_err(|e| e.to_string())?;
+    let keyword = expect!(lexer, Kind::Return);
 
     let value = parse_expression(lexer)?;
 
-    let ending_semi = lexer.expect(Kind::Op(Operator::SemiColon)).map_err(|e| e.to_string())?;
+    let ending_semi = expect!(lexer, Kind::Op(Operator::SemiColon));
 
     let location = keyword.location.start_byte..ending_semi.location.end_byte;
     Ok(Expression::Return {
@@ -363,7 +340,7 @@ fn parse_return_expression<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expres
 }
 
 fn parse_primitive<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    let (primitive, location) = match lexer.next().transpose().map_err(|e| e.to_string())? {
+    let (primitive, location) = match consume!(lexer) {
         Some(Token {
             kind: Kind::Value(Value::Primitive(primitive)),
             location,

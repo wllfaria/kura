@@ -33,6 +33,12 @@ pub struct FunArgument<'ast> {
     pub location: Location,
 }
 
+impl<'ast> FunArgument<'ast> {
+    pub fn new(name: &'ast str, ty: Type<'ast>, location: Location) -> Self {
+        Self { name, ty, location }
+    }
+}
+
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PrimitiveType {
     #[default]

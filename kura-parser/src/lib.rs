@@ -8,6 +8,7 @@ use kura_lexer::{Lexer, TransposeRef};
 
 use crate::expression::parse_identifier;
 
+/// Consumes the next token from the lexer, returning an error if there is no next token.
 #[macro_export]
 macro_rules! consume {
     ($lexer:expr) => {
@@ -111,14 +112,11 @@ impl<'par> Parser<'par> {
         let mut arguments = vec![];
 
         loop {
-            let (arg_name_expr, arg_name) = parse_identifier(&mut self.lexer)?;
-            let arg_type = parse_type_annotation(&mut self.lexer)?;
+            let (arg_name_expr, name) = parse_identifier(&mut self.lexer)?;
+            let ty = parse_type_annotation(&mut self.lexer)?;
 
-            arguments.push(FunArgument {
-                name: arg_name,
-                location: Location::new(arg_name_expr.location().start_byte, arg_type.location().end_byte),
-                ty: arg_type,
-            });
+            let location = Location::new(arg_name_expr.location().start_byte, ty.location().end_byte);
+            arguments.push(FunArgument::new(name, ty, location));
 
             match peek!(self.lexer) {
                 Some(token) if matches!(token.kind, Kind::Op(Operator::Comma)) => (),
