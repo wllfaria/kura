@@ -73,12 +73,16 @@ impl<'lex> Lexer<'lex> {
         if kind == &expected {
             Ok(token)
         } else {
-            Err(Error::from(token.location))
+            Err(Error::new(
+                token.location,
+                format!("expected {expected:?} but got {kind:?}"),
+            ))
         }
     }
 
     pub fn expect_one_of(&mut self, expected_list: &[Kind<'_>]) -> Result<Token<'lex>, Error> {
         let token = self.next().transpose()?;
+        let location = token.as_ref().map(|token| token.location);
         let kind = token.as_ref().map(|token| &token.kind);
         let kind = kind.unwrap_or(&Kind::Eof);
 
@@ -90,7 +94,10 @@ impl<'lex> Lexer<'lex> {
                 .map(|k| k.to_string())
                 .collect::<Vec<_>>()
                 .join(" ");
-            panic!("invalid token kind. expected one of {kinds} but got {kind}");
+            Err(Error::new(
+                location.unwrap_or((self.pos, self.pos).into()),
+                format!("expected one of {kinds} but got {kind:?}"),
+            ))
         }
     }
 }

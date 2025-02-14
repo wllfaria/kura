@@ -1,190 +1,52 @@
+pub mod ast;
 mod expression;
 
-use expression::parse_type_annotation;
-use kura_lexer::token::primitive::{FloatSizes, IntSizes, Numeral};
+use ast::{FunArgument, Statement};
+use expression::{parse_expr_block, parse_type_annotation};
 use kura_lexer::token::{Kind, Location, Operator, Token};
 use kura_lexer::{Lexer, TransposeRef};
 
-use crate::expression::{parse_expression, parse_identifier};
+use crate::expression::parse_identifier;
 
-static PRIMITIVE_MAP: &[(&str, PrimitiveType)] = &[
-    ("u8", PrimitiveType::U8),
-    ("u16", PrimitiveType::U16),
-    ("u32", PrimitiveType::U32),
-    ("u64", PrimitiveType::U64),
-    ("i8", PrimitiveType::I8),
-    ("i16", PrimitiveType::I16),
-    ("i32", PrimitiveType::I32),
-    ("i64", PrimitiveType::I64),
-    ("bool", PrimitiveType::Bool),
-    ("f32", PrimitiveType::F32),
-    ("f64", PrimitiveType::F64),
-];
-
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum PrimitiveType {
-    #[default]
-    Unit,
-    U8,
-    U16,
-    U32,
-    U64,
-    Usize,
-    I8,
-    I16,
-    I32,
-    I64,
-    Isize,
-    Bool,
-    F32,
-    F64,
+#[macro_export]
+macro_rules! consume {
+    ($lexer:expr) => {
+        $lexer.next().transpose().map_err(|e| e.to_string())?
+    };
 }
 
-impl From<IntSizes> for PrimitiveType {
-    fn from(size: IntSizes) -> Self {
-        match size {
-            IntSizes::I8 => PrimitiveType::I8,
-            IntSizes::I16 => PrimitiveType::I16,
-            IntSizes::I32 => PrimitiveType::I32,
-            IntSizes::I64 => PrimitiveType::I64,
-            IntSizes::Isize => PrimitiveType::Isize,
-            IntSizes::U8 => PrimitiveType::U8,
-            IntSizes::U16 => PrimitiveType::U16,
-            IntSizes::U32 => PrimitiveType::U32,
-            IntSizes::U64 => PrimitiveType::U64,
-            IntSizes::Usize => PrimitiveType::Usize,
+#[macro_export]
+macro_rules! expect {
+    ($lexer:expr, $kind:expr) => {
+        $lexer.expect($kind).map_err(|e| e.to_string())?
+    };
+
+    ($lexer:expr, $first:expr, $($rest:expr),+) => {
+        $lexer.expect_one_of(&[$first, $($rest),+]).map_err(|e| e.to_string())?
+    };
+}
+
+#[macro_export]
+macro_rules! peek {
+    ($lexer:expr) => {
+        $lexer.peek().transpose().map_err(|e| e.to_string())?
+    };
+}
+
+#[macro_export]
+macro_rules! peek_matches {
+    ($lexer:expr, $kind:pat) => {
+        {
+            if let Some(token) = peek!($lexer) {
+                matches!(token.kind, $kind)
+            } else {
+                false
+            }
         }
-    }
-}
+    };
 
-impl From<FloatSizes> for PrimitiveType {
-    fn from(size: FloatSizes) -> Self {
-        match size {
-            FloatSizes::F32 => PrimitiveType::F32,
-            FloatSizes::F64 => PrimitiveType::F64,
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum Type<'ast> {
-    Primitive { ty: PrimitiveType, location: Location },
-    Defined { name: &'ast str, location: Location },
-}
-
-impl<'ast> Type<'ast> {
-    fn from_identifier(name: &'ast str, location: Location) -> Self {
-        if let Some((_, ty)) = PRIMITIVE_MAP.iter().find(|(n, _)| name == *n) {
-            return Type::Primitive { ty: *ty, location };
-        };
-
-        Type::Defined { name, location }
-    }
-
-    fn location(&self) -> Location {
-        match self {
-            Self::Primitive { location, .. } => *location,
-            Self::Defined { location, .. } => *location,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct FunArgument<'ast> {
-    pub name: &'ast str,
-    pub ty: Type<'ast>,
-    pub location: Location,
-}
-
-#[derive(Debug)]
-pub enum Statement<'ast> {
-    Fun {
-        name: &'ast str,
-        arguments: Vec<FunArgument<'ast>>,
-        body: Vec<Expression<'ast>>,
-        return_type: Option<Type<'ast>>,
-        location: Location,
-    },
-}
-
-#[derive(Debug)]
-pub enum Expression<'ast> {
-    Var {
-        mutable: bool,
-        name: &'ast str,
-        ty: Option<Type<'ast>>,
-        value: Box<Expression<'ast>>,
-        location: Location,
-    },
-    Bool {
-        value: bool,
-        location: Location,
-    },
-    If {
-        condition: Box<Expression<'ast>>,
-        location: Location,
-        truthy: Box<Expression<'ast>>,
-        // each `else` or `else if` are added here, if nothing, then
-        // this will be an empty vec
-        //
-        // TODO: maybe use Options so we dont allocate a vector
-        falsy: Vec<Expression<'ast>>,
-    },
-    FunCall {
-        ident: &'ast str,
-        location: Location,
-        arguments: Vec<Expression<'ast>>,
-    },
-    Assign {
-        ident: Box<Expression<'ast>>,
-        location: Location,
-        value: Box<Expression<'ast>>,
-    },
-    Ident {
-        name: &'ast str,
-        location: Location,
-    },
-    Block {
-        expressions: Vec<Expression<'ast>>,
-        location: Location,
-    },
-    FloatLiteral {
-        value: f64,
-        size: Option<FloatSizes>,
-        location: Location,
-    },
-    IntLiteral {
-        value: Numeral,
-        size: Option<IntSizes>,
-        location: Location,
-    },
-    BinaryOp {
-        operator: Operator,
-        lhs: Box<Expression<'ast>>,
-        rhs: Box<Expression<'ast>>,
-        location: Location,
-    },
-    Return {
-        value: Box<Expression<'ast>>,
-        location: Location,
-    },
-}
-
-impl Expression<'_> {
-    fn location(&self) -> Location {
-        match self {
-            Expression::Var { location, .. } => *location,
-            Expression::If { location, .. } => *location,
-            Expression::Ident { location, .. } => *location,
-            Expression::Bool { location, .. } => *location,
-            Expression::Block { location, .. } => *location,
-            Expression::FunCall { location, .. } => *location,
-            Expression::Assign { location, .. } => *location,
-            Expression::Return { location, .. } => *location,
-            Expression::FloatLiteral { location, .. } => *location,
-            Expression::IntLiteral { location, .. } => *location,
-            Expression::BinaryOp { location, .. } => *location,
-        }
+    ($lexer:expr, $kind:ident, $($rest:expr),+) => {
+        matches!(peek!($lexer).map(|t| t.kind), $kind $(|| peek_matches!($lexer, $($rest),+))?)
     }
 }
 
@@ -210,24 +72,46 @@ impl<'par> Parser<'par> {
     }
 
     fn parse_statement(&mut self) -> Result<Statement<'par>, String> {
-        match self.lexer.peek().transpose().map_err(|e| e.to_string())? {
-            Some(token) => match &token.kind {
-                Kind::Fun => self.parse_function(),
-                t => todo!("{t:?}"),
-            },
-            _ => todo!(),
+        match peek!(self.lexer) {
+            Some(token) if matches!(token.kind, Kind::Fun) => self.parse_function(),
+            Some(token) => todo!("{token:?}"),
+            None => todo!(),
         }
     }
 
+    fn parse_function(&mut self) -> Result<Statement<'par>, String> {
+        let keyword = expect!(self.lexer, Kind::Fun);
+
+        let (_, name) = parse_identifier(&mut self.lexer)?;
+        let arguments = self.parse_function_args(&keyword)?;
+
+        let has_return = peek_matches!(self.lexer, Kind::Op(Operator::ThickArrow));
+        let return_type = if has_return { Some(parse_type_annotation(&mut self.lexer)?) } else { None };
+
+        let body = parse_expr_block(&mut self.lexer)?;
+        let location = keyword.location.start_byte..body.location().end_byte;
+
+        Ok(Statement::Fun {
+            name,
+            arguments,
+            body,
+            return_type,
+            location: location.into(),
+        })
+    }
+
     fn parse_function_args(&mut self, _: &Token<'_>) -> Result<Vec<FunArgument<'par>>, String> {
+        expect!(self.lexer, Kind::Op(Operator::LeftParen));
+
+        if peek_matches!(self.lexer, Kind::Op(Operator::RightParen)) {
+            consume!(self.lexer);
+            return Ok(vec![]);
+        }
+
         let mut arguments = vec![];
 
         loop {
             let (arg_name_expr, arg_name) = parse_identifier(&mut self.lexer)?;
-            self.lexer
-                .expect(Kind::Op(Operator::Colon))
-                .map_err(|e| e.to_string())?;
-
             let arg_type = parse_type_annotation(&mut self.lexer)?;
 
             arguments.push(FunArgument {
@@ -236,81 +120,17 @@ impl<'par> Parser<'par> {
                 ty: arg_type,
             });
 
-            match self.lexer.peek().transpose().map_err(|e| e.to_string())? {
-                Some(token) => match token.kind {
-                    Kind::Op(Operator::RightParen) => break,
-                    Kind::Op(Operator::Comma) => (),
-                    _ => return Err(token.location.to_string())?,
-                },
+            match peek!(self.lexer) {
+                Some(token) if matches!(token.kind, Kind::Op(Operator::Comma)) => (),
+                Some(token) if matches!(token.kind, Kind::Op(Operator::RightParen)) => break,
+                Some(token) => return Err(token.location.to_string())?,
                 None => break,
             }
         }
 
+        expect!(self.lexer, Kind::Op(Operator::RightParen));
+
         Ok(arguments)
-    }
-
-    fn parse_function(&mut self) -> Result<Statement<'par>, String> {
-        let keyword = self.lexer.expect(Kind::Fun).map_err(|e| e.to_string())?;
-        let (_, fun_name) = parse_identifier(&mut self.lexer)?;
-        self.lexer
-            .expect(Kind::Op(Operator::LeftParen))
-            .map_err(|e| e.to_string())?;
-
-        let mut arguments = vec![];
-        if let Some(next) = self.lexer.peek().transpose().map_err(|e| e.to_string())? {
-            if !matches!(next.kind, Kind::Op(Operator::RightParen)) {
-                arguments = self.parse_function_args(&keyword)?;
-            }
-        }
-
-        // after parsing argument list we need to consume the closing parenthesis
-        self.lexer
-            .expect(Kind::Op(Operator::RightParen))
-            .map_err(|e| e.to_string())?;
-
-        // after the argument list of a function, there can be an optional return type annotation
-        // => <TYPE> {
-        // before the left brace, but its fine to be ommited
-        let has_return = match self.lexer.peek().transpose().map_err(|e| e.to_string())? {
-            Some(token) => matches!(token.kind, Kind::Op(Operator::ThickArrow)),
-            _ => false,
-        };
-
-        let return_type = if has_return {
-            self.lexer.next().transpose().map_err(|e| e.to_string())?;
-            let return_type = parse_type_annotation(&mut self.lexer)?;
-            Some(return_type)
-        } else {
-            None
-        };
-
-        self.lexer
-            .expect(Kind::Op(Operator::LeftBrace))
-            .map_err(|e| e.to_string())?;
-
-        let mut body = vec![];
-
-        while let Some(token) = self.lexer.peek().transpose().map_err(|e| e.to_string())? {
-            if let Kind::Op(Operator::RightBrace) = token.kind {
-                break;
-            }
-            body.push(parse_expression(&mut self.lexer, true)?);
-        }
-
-        // consume the closing brace of the function
-        let closing_brace = self
-            .lexer
-            .expect(Kind::Op(Operator::RightBrace))
-            .map_err(|e| e.to_string())?;
-
-        let location = keyword.location.start_byte..closing_brace.location.end_byte;
-        Ok(Statement::Fun {
-            name: fun_name,
-            arguments,
-            body,
-            return_type,
-            location: location.into(),
-        })
     }
 }
 

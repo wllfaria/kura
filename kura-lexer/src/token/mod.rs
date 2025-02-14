@@ -66,7 +66,7 @@ impl From<Range<usize>> for Location {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Token<'tok> {
     pub kind: Kind<'tok>,
     pub location: Location,

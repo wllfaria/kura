@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use kura_lexer::token::primitive::{IntSizes, Numeral};
-use kura_parser::{Expression, FunArgument, PrimitiveType, Statement, Type as ParserType};
+use kura_parser::ast::{Expression, FunArgument, PrimitiveType, Statement, Type as ParserType};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 enum Type<'ast> {
@@ -49,7 +49,7 @@ impl<'ast> From<&FunArgument<'ast>> for TypedFunArgument<'ast> {
 enum TypedStatement<'ast> {
     Fun {
         name: &'ast str,
-        body: Vec<TypedExpression<'ast>>,
+        body: TypedExpression<'ast>,
         return_type: Type<'ast>,
         arguments: Vec<TypedFunArgument<'ast>>,
     },
@@ -76,6 +76,15 @@ enum TypedExpression<'ast> {
         name: &'ast str,
         ty: Type<'ast>,
     },
+    Block {
+        body: Vec<TypedExpression<'ast>>,
+        trailing_expr: Option<Box<TypedExpression<'ast>>>,
+        ty: Type<'ast>,
+    },
+    Bool {
+        value: bool,
+        ty: Type<'ast>,
+    },
 }
 
 impl<'ast> TypedExpression<'ast> {
@@ -85,6 +94,8 @@ impl<'ast> TypedExpression<'ast> {
             Self::IntLiteral { ty, .. } => *ty,
             Self::FunCall { ty, .. } => *ty,
             Self::Ident { ty, .. } => *ty,
+            Self::Block { ty, .. } => *ty,
+            Self::Bool { ty, .. } => *ty,
         }
     }
 }
@@ -186,23 +197,24 @@ fn typecheck_function<'ast>(
         return_type,
         ..
     } = function;
-    let mut typed_body = vec![];
 
     for arg in arguments {
         let ty = arg.ty.into();
         ctx.get_scope().insert(arg.name, ty);
     }
 
-    for expr in body {
-        let expr = typecheck_expression(ctx, functions, expr, None);
-        typed_body.push(expr);
+    let return_type = return_type.map(Into::into).unwrap_or(PrimitiveType::Unit.into());
+    let body = typecheck_expression(ctx, functions, body, None);
+
+    if return_type != body.ty() {
+        panic!("expected return type {return_type:?} but got {:?}", body.ty())
     }
 
     TypedStatement::Fun {
         name,
-        body: typed_body,
+        body,
         arguments: arguments.iter().map(Into::into).collect(),
-        return_type: return_type.map(Into::into).unwrap_or(PrimitiveType::Unit.into()),
+        return_type,
     }
 }
 
@@ -215,11 +227,60 @@ fn typecheck_expression<'ast>(
     match expr {
         Expression::Var { .. } => typecheck_var(ctx, functions, expr),
         Expression::FunCall { .. } => typecheck_fun_call(ctx, functions, expr),
+        Expression::Block { .. } => typecheck_block(ctx, functions, expr),
 
         Expression::IntLiteral { .. } => typecheck_uint(expr, expected_ty),
         Expression::Ident { .. } => typecheck_ident(ctx, expr),
 
-        _ => todo!(),
+        Expression::Bool { .. } => typecheck_bool(expr),
+
+        Expression::If { .. } => todo!(),
+        Expression::Assign { .. } => todo!(),
+        Expression::FloatLiteral { .. } => todo!(),
+        Expression::BinaryOp { .. } => todo!(),
+        Expression::Return { .. } => todo!(),
+    }
+}
+
+fn typecheck_bool<'ast>(expr: &Expression<'ast>) -> TypedExpression<'ast> {
+    let Expression::Bool { value, .. } = expr else { unreachable!() };
+
+    TypedExpression::Bool {
+        value: *value,
+        ty: PrimitiveType::Bool.into(),
+    }
+}
+
+fn typecheck_block<'ast>(
+    ctx: &mut Context<'ast>,
+    functions: &'ast Functions<'ast>,
+    expr: &Expression<'ast>,
+) -> TypedExpression<'ast> {
+    let Expression::Block {
+        body, trailing_expr, ..
+    } = expr
+    else {
+        unreachable!()
+    };
+
+    let mut typed_body = vec![];
+
+    for expr in body {
+        let expr = typecheck_expression(ctx, functions, expr, None);
+        typed_body.push(expr);
+    }
+
+    let trailing_expr = trailing_expr
+        .as_ref()
+        .map(|trailing_expr| Box::new(typecheck_expression(ctx, functions, trailing_expr, None)));
+
+    TypedExpression::Block {
+        body: typed_body,
+        ty: trailing_expr
+            .as_ref()
+            .map(|expr| expr.ty())
+            .unwrap_or(PrimitiveType::Unit.into()),
+        trailing_expr,
     }
 }
 
@@ -346,7 +407,9 @@ mod tests {
     #[test]
     fn m_test() {
         let code = r#"
-fun do_something_with_x(x: i32) => i32 {}
+fun do_something_with_x(x: i32) => i32 {
+    true
+}
 
 fun main() {
     const x = 10;

@@ -7,6 +7,10 @@ pub struct Error {
 }
 
 impl Error {
+    pub fn new(location: Location, message: String) -> Self {
+        Self { location, message }
+    }
+
     pub fn with_message(&mut self, message: String) {
         self.message = message;
     }

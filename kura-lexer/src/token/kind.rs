@@ -1,9 +1,10 @@
 use super::operator::Operator;
+use super::primitive::Primitive;
 use super::value::Value;
 use super::{IntoToken, Token};
 use crate::error::Error;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
 pub enum Kind<'tok> {
     Value(Value<'tok>),
     Op(Operator),
@@ -17,6 +18,7 @@ pub enum Kind<'tok> {
     //Struct,
     //Enum,
     Return,
+    #[default]
     Eof,
 }
 
@@ -83,6 +85,8 @@ impl<'tok> Kind<'tok> {
             //"struct" => Kind::Struct,
             //"enum" => Kind::Enum,
             "return" => Kind::Return,
+            "false" => Kind::Value(Value::Primitive(Primitive::Bool(false))),
+            "true" => Kind::Value(Value::Primitive(Primitive::Bool(false))),
             _ => Kind::Value(Value::Ident(value)),
         }
     }

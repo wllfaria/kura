@@ -63,7 +63,7 @@ If {
         end_byte: 259,
     },
     truthy: Block {
-        expressions: [
+        body: [
             Var {
                 mutable: false,
                 name: "this_is_a_var",
@@ -101,6 +101,7 @@ If {
                 },
             },
         ],
+        trailing_expr: None,
         location: Location {
             start_byte: 53,
             end_byte: 114,
@@ -137,7 +138,7 @@ If {
                 end_byte: 259,
             },
             truthy: Block {
-                expressions: [
+                body: [
                     Var {
                         mutable: false,
                         name: "this_is_another",
@@ -175,6 +176,7 @@ If {
                         },
                     },
                 ],
+                trailing_expr: None,
                 location: Location {
                     start_byte: 139,
                     end_byte: 203,
@@ -182,7 +184,7 @@ If {
             },
             falsy: [
                 Block {
-                    expressions: [
+                    body: [
                         Var {
                             mutable: false,
                             name: "omg",
@@ -220,6 +222,7 @@ If {
                             },
                         },
                     ],
+                    trailing_expr: None,
                     location: Location {
                         start_byte: 209,
                         end_byte: 259,
