@@ -118,7 +118,6 @@ pub enum Expression<'ast> {
     },
     Bool {
         value: bool,
-        semi_colon: bool,
         location: Location,
     },
     If {

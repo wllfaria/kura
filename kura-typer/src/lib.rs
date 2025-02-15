@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use kura_lexer::token::primitive::{IntSizes, Numeral};
+use kura_lexer::token::primitive::{FloatSizes, IntSizes, Numeral};
 use kura_parser::ast::{Expression, FunArgument, PrimitiveType, Statement, Type as ParserType};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -45,6 +45,12 @@ impl<'ast> From<&FunArgument<'ast>> for TypedFunArgument<'ast> {
     }
 }
 
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+pub enum FloatNumeral {
+    F32(f32),
+    F64(f64),
+}
+
 #[derive(Debug)]
 enum TypedStatement<'ast> {
     Fun {
@@ -67,6 +73,10 @@ enum TypedExpression<'ast> {
         value: Numeral,
         ty: Type<'ast>,
     },
+    FloatLiteral {
+        value: FloatNumeral,
+        ty: Type<'ast>,
+    },
     FunCall {
         ident: &'ast str,
         arguments: Vec<TypedExpression<'ast>>,
@@ -85,6 +95,11 @@ enum TypedExpression<'ast> {
         value: bool,
         ty: Type<'ast>,
     },
+    Assign {
+        ident: Box<TypedExpression<'ast>>,
+        value: Box<TypedExpression<'ast>>,
+        ty: Type<'ast>,
+    },
 }
 
 impl<'ast> TypedExpression<'ast> {
@@ -96,6 +111,15 @@ impl<'ast> TypedExpression<'ast> {
             Self::Ident { ty, .. } => *ty,
             Self::Block { ty, .. } => *ty,
             Self::Bool { ty, .. } => *ty,
+            Self::FloatLiteral { ty, .. } => *ty,
+            Self::Assign { ty, .. } => *ty,
+        }
+    }
+
+    fn is_mutable(&self) -> bool {
+        match self {
+            Self::Var { mutable, .. } => *mutable,
+            _ => false,
         }
     }
 }
@@ -228,17 +252,59 @@ fn typecheck_expression<'ast>(
         Expression::Var { .. } => typecheck_var(ctx, functions, expr),
         Expression::FunCall { .. } => typecheck_fun_call(ctx, functions, expr),
         Expression::Block { .. } => typecheck_block(ctx, functions, expr),
+        Expression::Assign { .. } => typecheck_assign(ctx, functions, expr),
+
+        Expression::BinaryOp { .. } => typecheck_binop(ctx, functions, expr),
 
         Expression::IntLiteral { .. } => typecheck_uint(expr, expected_ty),
+        Expression::FloatLiteral { .. } => typecheck_float(expr, expected_ty),
+
         Expression::Ident { .. } => typecheck_ident(ctx, expr),
 
         Expression::Bool { .. } => typecheck_bool(expr),
 
         Expression::If { .. } => todo!(),
-        Expression::Assign { .. } => todo!(),
-        Expression::FloatLiteral { .. } => todo!(),
-        Expression::BinaryOp { .. } => todo!(),
         Expression::Return { .. } => todo!(),
+    }
+}
+
+fn typecheck_binop<'ast>(
+    ctx: &mut Context<'ast>,
+    functions: &'ast Functions<'ast>,
+    expr: &Expression<'ast>,
+) -> TypedExpression<'ast> {
+    let Expression::BinaryOp { lhs, operator, rhs, .. } = expr else { unreachable!() };
+
+    let lhs = typecheck_expression(ctx, functions, lhs, None);
+    let rhs = typecheck_expression(ctx, functions, rhs, None);
+
+    println!("{lhs:?} {operator:?} {rhs:?}");
+
+    todo!();
+}
+
+fn typecheck_assign<'ast>(
+    ctx: &mut Context<'ast>,
+    functions: &'ast Functions<'ast>,
+    expr: &Expression<'ast>,
+) -> TypedExpression<'ast> {
+    let Expression::Assign { ident, value, .. } = expr else { unreachable!() };
+
+    let ident = typecheck_expression(ctx, functions, ident, None);
+    let value = typecheck_expression(ctx, functions, value, None);
+
+    if !ident.is_mutable() {
+        panic!("cannot assign to immutable variable");
+    }
+
+    if ident.ty() != value.ty() {
+        panic!("expected type {:?} but got {:?}", ident.ty(), value.ty());
+    }
+
+    TypedExpression::Assign {
+        ty: ident.ty(),
+        ident: Box::new(ident),
+        value: Box::new(value),
     }
 }
 
@@ -397,6 +463,32 @@ fn typecheck_uint<'ast>(expr: &Expression<'ast>, expected_ty: Option<Type<'ast>>
     TypedExpression::IntLiteral { ty, value: *value }
 }
 
+fn typecheck_float<'ast>(expr: &Expression<'ast>, expected_ty: Option<Type<'ast>>) -> TypedExpression<'ast> {
+    let Expression::FloatLiteral { value, size, .. } = expr else { unreachable!() };
+
+    let expected_ty = match expected_ty {
+        Some(Type::Primitive(PrimitiveType::F32)) => FloatSizes::F32,
+        Some(Type::Primitive(PrimitiveType::F64)) => FloatSizes::F64,
+        _ => FloatSizes::F32,
+    };
+
+    let size = size.unwrap_or(expected_ty);
+    let ty = match size {
+        FloatSizes::F32 if *value > f32::MAX as f64 => panic!("value is too big for f32"),
+        FloatSizes::F32 if *value < f32::MIN as f64 => panic!("value is too small for f32"),
+        FloatSizes::F32 => PrimitiveType::F32.into(),
+        _ => PrimitiveType::F64.into(),
+    };
+
+    let value = match ty {
+        Type::Primitive(PrimitiveType::F32) => FloatNumeral::F32(*value as f32),
+        Type::Primitive(PrimitiveType::F64) => FloatNumeral::F64(*value),
+        _ => unreachable!(),
+    };
+
+    TypedExpression::FloatLiteral { ty, value }
+}
+
 #[cfg(test)]
 mod tests {
     use kura_lexer::Lexer;
@@ -405,10 +497,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn m_test() {
+    fn test() {
         let code = r#"
 fun do_something_with_x(x: i32) => i32 {
-    true
+    if x > 10 {
+        return x;
+    }
+    x
 }
 
 fun main() {
@@ -416,6 +511,7 @@ fun main() {
     const x: i8 = 10;
     const x: i16 = 10;
     const x: i32 = 10;
+    x = 10;
     do_something_with_x(x);
 }
 

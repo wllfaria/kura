@@ -19,7 +19,9 @@ fn get_precedence(operator: Operator) -> u8 {
         Operator::Plus | Operator::Minus => precedences::SUM,
         Operator::Star | Operator::Slash => precedences::MUL,
         Operator::And => precedences::ASSOC,
-        Operator::LeftParen | Operator::EqualEqual | Operator::NotEqual => precedences::APPLY,
+        Operator::LeftParen | Operator::Greater | Operator::Less | Operator::EqualEqual | Operator::NotEqual => {
+            precedences::APPLY
+        }
         _ => precedences::BASE,
     }
 }
@@ -69,8 +71,7 @@ pub fn parse_expr_block<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expressio
         // is a syntax error.
         match peek!(lexer) {
             Some(token) if matches!(token.kind, Kind::Op(Operator::SemiColon)) => {
-                // consume the expression semicolon
-                lexer.next().transpose().map_err(|e| e.to_string())?;
+                consume!(lexer);
                 expressions.push(expr);
             }
             Some(token) if matches!(token.kind, Kind::Op(Operator::RightBrace)) => {
@@ -119,7 +120,7 @@ fn parse_variable<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'par
 }
 
 fn parse_if_expression<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    let keyword = lexer.expect(Kind::If).map_err(|e| e.to_string())?;
+    let keyword = expect!(lexer, Kind::If);
 
     let condition = parse_expression(lexer)?;
     let body = parse_expr_block(lexer)?;
@@ -352,11 +353,7 @@ fn parse_primitive<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'pa
     match primitive {
         Primitive::Int { value, size } => Ok(Expression::IntLiteral { value, size, location }),
         Primitive::Float { value, size } => Ok(Expression::FloatLiteral { value, size, location }),
-        Primitive::Bool(value) => Ok(Expression::Bool {
-            value,
-            semi_colon: false,
-            location,
-        }),
+        Primitive::Bool(value) => Ok(Expression::Bool { value, location }),
     }
 }
 

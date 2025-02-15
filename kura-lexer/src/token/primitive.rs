@@ -35,7 +35,7 @@ impl<S: AsRef<str>> IntoNumeral for S {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum FloatSizes {
     F32,
     F64,
