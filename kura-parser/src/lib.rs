@@ -213,4 +213,27 @@ mod tests {
 
         insta::assert_debug_snapshot!(ast);
     }
+
+    #[test]
+    fn if_chain() {
+        let source = r#"
+            fun main() {
+                const x = 10;
+                if x > 10 {
+                    println("x is greater than 10");
+                } else if x > 5 {
+                    println("x is greater than 5");
+                } else {
+                    println("x is less than 5");
+                }
+            }
+        "#;
+
+        let ast = match make_sut(source).parse() {
+            Ok(expr) => expr,
+            Err(e) => panic!("{e:?}"),
+        };
+
+        insta::assert_debug_snapshot!(ast);
+    }
 }

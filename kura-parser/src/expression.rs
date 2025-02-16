@@ -170,8 +170,21 @@ fn parse_value<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser
     match value {
         Value::Primitive(_) => parse_primitive(lexer),
         Value::Ident(_) => Ok(parse_identifier(lexer)?.0),
-        t => todo!("{t}"),
+        Value::String(_) => Ok(parse_string(lexer)?),
     }
+}
+
+fn parse_string<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
+    let (value, location) = match consume!(lexer) {
+        Some(Token {
+            kind: Kind::Value(Value::String(string)),
+            location,
+            ..
+        }) => (string, location),
+        _ => unreachable!(),
+    };
+
+    Ok(Expression::String { value, location })
 }
 
 fn parse_operation<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {

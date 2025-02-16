@@ -100,6 +100,10 @@ enum TypedExpression<'ast> {
         value: Box<TypedExpression<'ast>>,
         ty: Type<'ast>,
     },
+    String {
+        value: &'ast str,
+        ty: Type<'ast>,
+    },
 }
 
 impl<'ast> TypedExpression<'ast> {
@@ -113,6 +117,7 @@ impl<'ast> TypedExpression<'ast> {
             Self::Bool { ty, .. } => *ty,
             Self::FloatLiteral { ty, .. } => *ty,
             Self::Assign { ty, .. } => *ty,
+            Self::String { ty, .. } => *ty,
         }
     }
 
@@ -205,8 +210,6 @@ pub fn typecheck_program(program: &[Statement<'_>]) {
             }
         }
     }
-
-    println!("{ast:#?}");
 }
 
 fn typecheck_function<'ast>(
@@ -254,6 +257,7 @@ fn typecheck_expression<'ast>(
         Expression::Block { .. } => typecheck_block(ctx, functions, expr),
         Expression::Assign { .. } => typecheck_assign(ctx, functions, expr),
 
+        Expression::If { .. } => typecheck_if(ctx, functions, expr),
         Expression::BinaryOp { .. } => typecheck_binop(ctx, functions, expr),
 
         Expression::IntLiteral { .. } => typecheck_uint(expr, expected_ty),
@@ -263,8 +267,9 @@ fn typecheck_expression<'ast>(
 
         Expression::Bool { .. } => typecheck_bool(expr),
 
-        Expression::If { .. } => todo!(),
         Expression::Return { .. } => todo!(),
+
+        Expression::String { .. } => todo!(),
     }
 }
 
@@ -278,7 +283,29 @@ fn typecheck_binop<'ast>(
     let lhs = typecheck_expression(ctx, functions, lhs, None);
     let rhs = typecheck_expression(ctx, functions, rhs, None);
 
-    println!("{lhs:?} {operator:?} {rhs:?}");
+    todo!();
+}
+
+fn typecheck_if<'ast>(
+    ctx: &mut Context<'ast>,
+    functions: &'ast Functions<'ast>,
+    expr: &Expression<'ast>,
+) -> TypedExpression<'ast> {
+    let Expression::If {
+        condition,
+        truthy,
+        falsy,
+        ..
+    } = expr
+    else {
+        unreachable!()
+    };
+
+    println!("typechecking if statement");
+
+    let condition = typecheck_expression(ctx, functions, condition, None);
+
+    let truthy = typecheck_expression(ctx, functions, truthy, None);
 
     todo!();
 }
@@ -505,21 +532,21 @@ fun do_something_with_x(x: i32) => i32 {
     }
     x
 }
-
-fun main() {
-    const x = 10;
-    const x: i8 = 10;
-    const x: i16 = 10;
-    const x: i32 = 10;
-    x = 10;
-    do_something_with_x(x);
-}
+//
+//fun main() {
+//    const x = 10;
+//    const x: i8 = 10;
+//    const x: i16 = 10;
+//    const x: i32 = 10;
+//    do_something_with_x(x);
+//}
 
         "#;
 
         let lexer = Lexer::new(code);
         let parser = Parser::new(code, lexer);
         let program = parser.parse().unwrap();
+        //println!("program: {program:#?}");
         typecheck_program(&program);
 
         panic!();

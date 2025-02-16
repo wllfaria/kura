@@ -1,0 +1,183 @@
+---
+source: kura-parser/src/lib.rs
+expression: ast
+---
+[
+    Fun {
+        name: "main",
+        arguments: [],
+        body: Block {
+            body: [
+                Var {
+                    mutable: false,
+                    name: "x",
+                    ty: None,
+                    value: IntLiteral {
+                        value: Unsigned(
+                            10,
+                        ),
+                        size: None,
+                        location: Location {
+                            start_byte: 52,
+                            end_byte: 54,
+                        },
+                    },
+                    location: Location {
+                        start_byte: 42,
+                        end_byte: 54,
+                    },
+                },
+            ],
+            trailing_expr: Some(
+                If {
+                    condition: BinaryOp {
+                        operator: Greater,
+                        lhs: Ident {
+                            name: "x",
+                            location: Location {
+                                start_byte: 75,
+                                end_byte: 76,
+                            },
+                        },
+                        rhs: IntLiteral {
+                            value: Unsigned(
+                                10,
+                            ),
+                            size: None,
+                            location: Location {
+                                start_byte: 79,
+                                end_byte: 81,
+                            },
+                        },
+                        location: Location {
+                            start_byte: 75,
+                            end_byte: 81,
+                        },
+                    },
+                    location: Location {
+                        start_byte: 72,
+                        end_byte: 311,
+                    },
+                    truthy: Block {
+                        body: [
+                            FunCall {
+                                ident: "println",
+                                location: Location {
+                                    start_byte: 104,
+                                    end_byte: 134,
+                                },
+                                arguments: [
+                                    String {
+                                        value: "x is greater than 10",
+                                        location: Location {
+                                            start_byte: 112,
+                                            end_byte: 133,
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
+                        trailing_expr: None,
+                        location: Location {
+                            start_byte: 82,
+                            end_byte: 153,
+                        },
+                    },
+                    falsy: [
+                        If {
+                            condition: BinaryOp {
+                                operator: Greater,
+                                lhs: Ident {
+                                    name: "x",
+                                    location: Location {
+                                        start_byte: 162,
+                                        end_byte: 163,
+                                    },
+                                },
+                                rhs: IntLiteral {
+                                    value: Unsigned(
+                                        5,
+                                    ),
+                                    size: None,
+                                    location: Location {
+                                        start_byte: 166,
+                                        end_byte: 167,
+                                    },
+                                },
+                                location: Location {
+                                    start_byte: 162,
+                                    end_byte: 167,
+                                },
+                            },
+                            location: Location {
+                                start_byte: 159,
+                                end_byte: 311,
+                            },
+                            truthy: Block {
+                                body: [
+                                    FunCall {
+                                        ident: "println",
+                                        location: Location {
+                                            start_byte: 190,
+                                            end_byte: 219,
+                                        },
+                                        arguments: [
+                                            String {
+                                                value: "x is greater than 5",
+                                                location: Location {
+                                                    start_byte: 198,
+                                                    end_byte: 218,
+                                                },
+                                            },
+                                        ],
+                                    },
+                                ],
+                                trailing_expr: None,
+                                location: Location {
+                                    start_byte: 168,
+                                    end_byte: 238,
+                                },
+                            },
+                            falsy: [
+                                Block {
+                                    body: [
+                                        FunCall {
+                                            ident: "println",
+                                            location: Location {
+                                                start_byte: 266,
+                                                end_byte: 292,
+                                            },
+                                            arguments: [
+                                                String {
+                                                    value: "x is less than 5",
+                                                    location: Location {
+                                                        start_byte: 274,
+                                                        end_byte: 291,
+                                                    },
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                    trailing_expr: None,
+                                    location: Location {
+                                        start_byte: 244,
+                                        end_byte: 311,
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ),
+            location: Location {
+                start_byte: 24,
+                end_byte: 325,
+            },
+        },
+        return_type: None,
+        location: Location {
+            start_byte: 13,
+            end_byte: 325,
+        },
+    },
+]

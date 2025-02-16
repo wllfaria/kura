@@ -1,0 +1,17 @@
+---
+source: kura-lexer/src/lib.rs
+expression: strings
+---
+[
+    Token {
+        kind: Value(
+            String(
+                "hello world",
+            ),
+        ),
+        location: Location {
+            start_byte: 0,
+            end_byte: 12,
+        },
+    },
+]

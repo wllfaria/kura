@@ -3,7 +3,7 @@ pub mod token;
 
 use error::Error;
 use token::primitive::{FloatSizes, IntSizes, IntoNumeral, Primitive};
-use token::{IntoToken, Kind, Operator, Token};
+use token::{IntoToken, Kind, Operator, Token, Value};
 
 pub trait TransposeRef<'a, T, E: std::error::Error> {
     fn transpose(self) -> Result<Option<&'a T>, &'a E>;
@@ -21,6 +21,7 @@ impl<'lex> TransposeRef<'lex, Token<'lex>, Error> for Option<&'lex Result<Token<
     }
 }
 
+#[derive(Debug)]
 pub struct Lexer<'lex> {
     pos: usize,
     source: &'lex str,
@@ -195,6 +196,7 @@ impl<'lex> Iterator for Lexer<'lex> {
                 ('<', _) => Some(Ok(self.make_token(Operator::Less, 1))),
                 ('>', _) => Some(Ok(self.make_token(Operator::Greater, 1))),
                 ('-', _) => Some(Ok(self.make_token(Operator::Minus, 1))),
+                ('"', _) => Some(Ok(self.lex_string())),
 
                 ('a'..='z' | 'A'..='Z' | '_', _) => Some(Ok(self.lex_identifier())),
                 ('0'..='9', _) => Some(self.lex_numerals()),
@@ -328,6 +330,18 @@ impl<'lex> Lexer<'lex> {
         Ok(token.into_token(start_byte, self.pos))
     }
 
+    fn lex_string(&mut self) -> Token<'lex> {
+        let start_byte = self.pos;
+        self.advance_by(1);
+        let end_of_string = self.source.find(['"', '\n']).unwrap_or(self.source.len());
+
+        let string = &self.source[..end_of_string];
+        self.pos += end_of_string;
+        self.source = &self.source[end_of_string + 1..];
+
+        Kind::Value(Value::String(string)).into_token(start_byte, self.pos)
+    }
+
     fn advance_by(&mut self, amount: usize) {
         self.source = &self.source[amount..];
         self.pos += amount;
@@ -430,5 +444,17 @@ mod tests {
         }
 
         insta::assert_debug_snapshot!(calculate_circumference_function);
+    }
+
+    #[test]
+    fn lexing_strings() {
+        let source = r#""hello world""#;
+
+        let mut strings = vec![];
+        for token in make_sut(source) {
+            strings.push(token.unwrap());
+        }
+
+        insta::assert_debug_snapshot!(strings);
     }
 }

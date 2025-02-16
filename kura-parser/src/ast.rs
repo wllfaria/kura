@@ -167,6 +167,10 @@ pub enum Expression<'ast> {
         value: Box<Expression<'ast>>,
         location: Location,
     },
+    String {
+        value: &'ast str,
+        location: Location,
+    },
 }
 
 impl Expression<'_> {
@@ -183,6 +187,7 @@ impl Expression<'_> {
             Expression::FloatLiteral { location, .. } => *location,
             Expression::IntLiteral { location, .. } => *location,
             Expression::BinaryOp { location, .. } => *location,
+            Expression::String { location, .. } => *location,
         }
     }
 }
