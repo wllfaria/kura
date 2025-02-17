@@ -39,11 +39,7 @@ expression: builtin_identifiers
         },
     },
     Token {
-        kind: Value(
-            Ident(
-                "struct",
-            ),
-        ),
+        kind: Struct,
         location: Location {
             start_byte: 22,
             end_byte: 28,

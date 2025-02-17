@@ -165,7 +165,8 @@ impl<'ast> From<&[Statement<'ast>]> for Functions<'ast> {
                         arguments,
                         return_type,
                         ..
-                    } => acc.insert(name, (arguments, return_type).into()),
+                    } => _ = acc.insert(name, (arguments, return_type).into()),
+                    Statement::Struct { .. } => (),
                 };
 
                 acc
@@ -208,6 +209,7 @@ pub fn typecheck_program(program: &[Statement<'_>]) {
                 let stat = typecheck_function(ctx, &functions, statement);
                 ast.push(stat);
             }
+            Statement::Struct { .. } => (),
         }
     }
 }
@@ -223,7 +225,10 @@ fn typecheck_function<'ast>(
         body,
         return_type,
         ..
-    } = function;
+    } = function
+    else {
+        unreachable!()
+    };
 
     for arg in arguments {
         let ty = arg.ty.into();

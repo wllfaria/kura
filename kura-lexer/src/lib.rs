@@ -457,4 +457,22 @@ mod tests {
 
         insta::assert_debug_snapshot!(strings);
     }
+
+    #[test]
+    fn lexing_structs() {
+        let source = r#"
+        struct SomeStruct {
+            member: i32,
+            another_member: f64,
+            yet_another_member: bool,
+        }
+        "#;
+
+        let mut tokens = vec![];
+        for token in make_sut(source) {
+            tokens.push(token.unwrap());
+        }
+
+        insta::assert_debug_snapshot!(tokens);
+    }
 }

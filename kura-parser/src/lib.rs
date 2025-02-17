@@ -1,7 +1,7 @@
 pub mod ast;
 mod expression;
 
-use ast::{FunArgument, Statement};
+use ast::{FunArgument, Statement, StructField};
 use expression::{parse_expr_block, parse_type_annotation};
 use kura_lexer::token::{Kind, Location, Operator, Token};
 use kura_lexer::{Lexer, TransposeRef};
@@ -25,6 +25,16 @@ macro_rules! expect {
     ($lexer:expr, $first:expr, $($rest:expr),+) => {
         $lexer.expect_one_of(&[$first, $($rest),+]).map_err(|e| e.to_string())?
     };
+}
+
+#[macro_export]
+macro_rules! expect_peek {
+    ($lexer:expr, $kind:expr) => {{
+        let token = peek!($lexer);
+        if token.is_none() || token.unwrap().kind != $kind {
+            return Err(format!("expected {:?} but got {:?}", $kind, token.unwrap().kind));
+        }
+    }};
 }
 
 #[macro_export]
@@ -75,6 +85,7 @@ impl<'par> Parser<'par> {
     fn parse_statement(&mut self) -> Result<Statement<'par>, String> {
         match peek!(self.lexer) {
             Some(token) if matches!(token.kind, Kind::Fun) => self.parse_function(),
+            Some(token) if matches!(token.kind, Kind::Struct) => self.parse_struct(),
             Some(token) => todo!("{token:?}"),
             None => todo!(),
         }
@@ -99,6 +110,55 @@ impl<'par> Parser<'par> {
             return_type,
             location: location.into(),
         })
+    }
+
+    fn parse_struct(&mut self) -> Result<Statement<'par>, String> {
+        let keyword = expect!(self.lexer, Kind::Struct);
+
+        let (_, name) = parse_identifier(&mut self.lexer)?;
+        let fields = self.parse_struct_fields(&keyword)?;
+
+        let end = expect!(self.lexer, Kind::Op(Operator::RightBrace));
+
+        let location = keyword.location.start_byte..end.location.end_byte;
+        Ok(Statement::Struct {
+            name,
+            fields,
+            location: location.into(),
+        })
+    }
+
+    fn parse_struct_fields(&mut self, _: &Token<'_>) -> Result<Vec<StructField<'par>>, String> {
+        expect!(self.lexer, Kind::Op(Operator::LeftBrace));
+
+        let mut fields = vec![];
+
+        loop {
+            if peek_matches!(self.lexer, Kind::Op(Operator::RightBrace)) {
+                break;
+            }
+
+            let ident = parse_identifier(&mut self.lexer)?;
+
+            expect_peek!(self.lexer, Kind::Op(Operator::Colon));
+            let ty = parse_type_annotation(&mut self.lexer)?;
+
+            let location = (ident.0.location().start_byte..ty.location().end_byte).into();
+            fields.push(StructField {
+                name: ident.1,
+                ty,
+                location,
+            });
+
+            match peek!(self.lexer) {
+                Some(token) if matches!(token.kind, Kind::Op(Operator::Comma)) => _ = consume!(self.lexer),
+                Some(token) if matches!(token.kind, Kind::Op(Operator::RightBrace)) => break,
+                Some(token) => return Err(token.location.to_string())?,
+                None => return Err("TODO".into()),
+            }
+        }
+
+        Ok(fields)
     }
 
     fn parse_function_args(&mut self, _: &Token<'_>) -> Result<Vec<FunArgument<'par>>, String> {
@@ -226,6 +286,24 @@ mod tests {
                 } else {
                     println("x is less than 5");
                 }
+            }
+        "#;
+
+        let ast = match make_sut(source).parse() {
+            Ok(expr) => expr,
+            Err(e) => panic!("{e:?}"),
+        };
+
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn struct_declaration() {
+        let source = r#"
+            struct SomeStruct {
+                member: i32,
+                another_member: f64,
+                yet_another_member: bool,
             }
         "#;
 

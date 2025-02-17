@@ -1,0 +1,57 @@
+---
+source: kura-parser/src/lib.rs
+expression: ast
+---
+[
+    Struct {
+        name: "SomeStruct",
+        fields: [
+            StructField {
+                name: "member",
+                ty: Primitive {
+                    ty: I32,
+                    location: Location {
+                        start_byte: 57,
+                        end_byte: 60,
+                    },
+                },
+                location: Location {
+                    start_byte: 49,
+                    end_byte: 60,
+                },
+            },
+            StructField {
+                name: "another_member",
+                ty: Primitive {
+                    ty: F64,
+                    location: Location {
+                        start_byte: 94,
+                        end_byte: 97,
+                    },
+                },
+                location: Location {
+                    start_byte: 78,
+                    end_byte: 97,
+                },
+            },
+            StructField {
+                name: "yet_another_member",
+                ty: Primitive {
+                    ty: Bool,
+                    location: Location {
+                        start_byte: 135,
+                        end_byte: 139,
+                    },
+                },
+                location: Location {
+                    start_byte: 115,
+                    end_byte: 139,
+                },
+            },
+        ],
+        location: Location {
+            start_byte: 13,
+            end_byte: 154,
+        },
+    },
+]

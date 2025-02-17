@@ -1,0 +1,162 @@
+---
+source: kura-lexer/src/lib.rs
+expression: tokens
+---
+[
+    Token {
+        kind: Struct,
+        location: Location {
+            start_byte: 9,
+            end_byte: 15,
+        },
+    },
+    Token {
+        kind: Value(
+            Ident(
+                "SomeStruct",
+            ),
+        ),
+        location: Location {
+            start_byte: 16,
+            end_byte: 26,
+        },
+    },
+    Token {
+        kind: Op(
+            LeftBrace,
+        ),
+        location: Location {
+            start_byte: 27,
+            end_byte: 28,
+        },
+    },
+    Token {
+        kind: Value(
+            Ident(
+                "member",
+            ),
+        ),
+        location: Location {
+            start_byte: 41,
+            end_byte: 47,
+        },
+    },
+    Token {
+        kind: Op(
+            Colon,
+        ),
+        location: Location {
+            start_byte: 47,
+            end_byte: 48,
+        },
+    },
+    Token {
+        kind: Value(
+            Ident(
+                "i32",
+            ),
+        ),
+        location: Location {
+            start_byte: 49,
+            end_byte: 52,
+        },
+    },
+    Token {
+        kind: Op(
+            Comma,
+        ),
+        location: Location {
+            start_byte: 52,
+            end_byte: 53,
+        },
+    },
+    Token {
+        kind: Value(
+            Ident(
+                "another_member",
+            ),
+        ),
+        location: Location {
+            start_byte: 66,
+            end_byte: 80,
+        },
+    },
+    Token {
+        kind: Op(
+            Colon,
+        ),
+        location: Location {
+            start_byte: 80,
+            end_byte: 81,
+        },
+    },
+    Token {
+        kind: Value(
+            Ident(
+                "f64",
+            ),
+        ),
+        location: Location {
+            start_byte: 82,
+            end_byte: 85,
+        },
+    },
+    Token {
+        kind: Op(
+            Comma,
+        ),
+        location: Location {
+            start_byte: 85,
+            end_byte: 86,
+        },
+    },
+    Token {
+        kind: Value(
+            Ident(
+                "yet_another_member",
+            ),
+        ),
+        location: Location {
+            start_byte: 99,
+            end_byte: 117,
+        },
+    },
+    Token {
+        kind: Op(
+            Colon,
+        ),
+        location: Location {
+            start_byte: 117,
+            end_byte: 118,
+        },
+    },
+    Token {
+        kind: Value(
+            Ident(
+                "bool",
+            ),
+        ),
+        location: Location {
+            start_byte: 119,
+            end_byte: 123,
+        },
+    },
+    Token {
+        kind: Op(
+            Comma,
+        ),
+        location: Location {
+            start_byte: 123,
+            end_byte: 124,
+        },
+    },
+    Token {
+        kind: Op(
+            RightBrace,
+        ),
+        location: Location {
+            start_byte: 133,
+            end_byte: 134,
+        },
+    },
+]

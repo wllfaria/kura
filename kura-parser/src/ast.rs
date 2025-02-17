@@ -24,10 +24,22 @@ pub enum Statement<'ast> {
         return_type: Option<Type<'ast>>,
         location: Location,
     },
+    Struct {
+        name: &'ast str,
+        fields: Vec<StructField<'ast>>,
+        location: Location,
+    },
 }
 
 #[derive(Debug)]
 pub struct FunArgument<'ast> {
+    pub name: &'ast str,
+    pub ty: Type<'ast>,
+    pub location: Location,
+}
+
+#[derive(Debug)]
+pub struct StructField<'ast> {
     pub name: &'ast str,
     pub ty: Type<'ast>,
     pub location: Location,
