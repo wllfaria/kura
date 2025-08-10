@@ -129,7 +129,7 @@ impl TryFrom<&str> for FloatSizes {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Primitive {
     Bool(bool),
     Int { value: Numeral, size: Option<IntSizes> },

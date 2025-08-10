@@ -1,8 +1,10 @@
 [package]
-name = "kura-typer"
+name = "kura-testbed"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
 kura-parser.workspace = true
 kura-lexer.workspace = true
+kura-typer.workspace = true
+miette.workspace = true

@@ -1,9 +1,10 @@
-use kura_lexer::error::Error;
 use kura_lexer::token::primitive::Primitive;
 use kura_lexer::token::{Kind, Location, Operator, Token, Value};
-use kura_lexer::{Lexer, TransposeRef};
+use kura_lexer::Lexer;
+use miette::NamedSource;
 
-use crate::ast::{Expression, Type};
+use crate::ast::*;
+use crate::error::Error;
 use crate::{consume, expect, peek, peek_matches};
 
 mod precedences {
@@ -26,37 +27,41 @@ fn get_precedence(operator: Operator) -> u8 {
     }
 }
 
-pub fn parse_expression<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    match peek!(lexer) {
+pub fn parse_expression<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<Expression<'parser>> {
+    match peek!(lexer)? {
         Some(token) if matches!(token.kind, Kind::Var | Kind::Const) => parse_variable(lexer),
         Some(_) => parse_with_precedence(lexer, precedences::BASE),
         None => unreachable!(),
     }
 }
 
-pub fn parse_identifier<'parser>(lexer: &mut Lexer<'parser>) -> Result<(Expression<'parser>, &'parser str), String> {
-    let name_and_loc = consume!(lexer).map(|token| match token.kind {
+pub fn parse_identifier<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<(Expression<'parser>, &'parser str)> {
+    let name_and_loc = consume!(lexer)?.map(|token| match token.kind {
         Kind::Value(Value::Ident(name)) => (name, token.location),
         _ => ("", token.location),
     });
 
     match name_and_loc {
-        Some(("", location)) => {
-            Err(Error::new(location, format!(r#"expected identifier but got "" {}"#, location)).to_string())
-        }
-        Some((name, location)) => Ok((Expression::Ident { name, location }, name)),
-        None => Err("TODO".into()),
+        Some(("", location)) => Err(Error::new(
+            location,
+            format!(r#"expected identifier but got "" {location}"#),
+            None,
+            NamedSource::new("file.rs", lexer.source_arc.clone()),
+        )
+        .into()),
+        Some((name, location)) => Ok((Expression::Ident(IdentExpr { name, location }), name)),
+        None => todo!(),
     }
 }
 
-pub fn parse_expr_block<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
+pub fn parse_expr_block<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<Expression<'parser>> {
     let mut expressions = vec![];
     let mut trailing_expr = None;
 
-    let block_start = expect!(lexer, Kind::Op(Operator::LeftBrace));
+    let block_start = expect!(lexer, Kind::Op(Operator::LeftBrace))?;
 
     loop {
-        match peek!(lexer) {
+        match peek!(lexer)? {
             Some(token) if matches!(token.kind, Kind::Op(Operator::RightBrace)) => break,
             None => break,
             _ => (),
@@ -69,9 +74,9 @@ pub fn parse_expr_block<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expressio
         //
         // if there is a expression without a semicolon that is not at the end of the block, that
         // is a syntax error.
-        match peek!(lexer) {
+        match peek!(lexer)? {
             Some(token) if matches!(token.kind, Kind::Op(Operator::SemiColon)) => {
-                consume!(lexer);
+                consume!(lexer)?;
                 expressions.push(expr);
             }
             Some(token) if matches!(token.kind, Kind::Op(Operator::RightBrace)) => {
@@ -82,17 +87,17 @@ pub fn parse_expr_block<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expressio
         }
     }
 
-    let block_end = expect!(lexer, Kind::Op(Operator::RightBrace));
+    let block_end = expect!(lexer, Kind::Op(Operator::RightBrace))?;
     let location = block_start.location.start_byte..block_end.location.end_byte;
-    Ok(Expression::Block {
+    Ok(Expression::Block(BlockExpr {
         body: expressions,
         trailing_expr,
         location: location.into(),
-    })
+    }))
 }
 
-fn parse_variable<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    let keyword = expect!(lexer, Kind::Var, Kind::Const);
+fn parse_variable<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<Expression<'parser>> {
+    let keyword = expect!(lexer, Kind::Var, Kind::Const)?;
     let mutable = matches!(keyword.kind, Kind::Var);
 
     let (_, name) = parse_identifier(lexer)?;
@@ -102,34 +107,34 @@ fn parse_variable<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'par
         false => None,
     };
 
-    expect!(lexer, Kind::Op(Operator::Equal));
+    expect!(lexer, Kind::Op(Operator::Equal))?;
 
-    let value = match peek!(lexer) {
+    let value = match peek!(lexer)? {
         Some(token) if matches!(token.kind, Kind::Op(Operator::LeftBrace)) => parse_expr_block(lexer)?,
         _ => parse_expression(lexer)?,
     };
 
     let location = Location::new(keyword.location.start_byte, value.location().end_byte);
-    Ok(Expression::Var {
+    Ok(Expression::Var(VarExpr {
         mutable,
         ty,
         name,
         value: Box::new(value),
         location,
-    })
+    }))
 }
 
-fn parse_if_expression<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    let keyword = expect!(lexer, Kind::If);
+fn parse_if_expression<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<Expression<'parser>> {
+    let keyword = expect!(lexer, Kind::If)?;
 
     let condition = parse_expression(lexer)?;
     let body = parse_expr_block(lexer)?;
 
     let mut falsy_branches = vec![];
 
-    while let Some(keyword) = peek!(lexer) {
+    while let Some(keyword) = peek!(lexer)? {
         if keyword.kind == Kind::Else {
-            consume!(lexer);
+            consume!(lexer)?;
 
             if peek_matches!(lexer, Kind::If) {
                 let else_if = parse_if_expression(lexer)?;
@@ -150,16 +155,16 @@ fn parse_if_expression<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression
     };
 
     let location = keyword.location.start_byte..end;
-    Ok(Expression::If {
+    Ok(Expression::If(IfExpr {
         condition: Box::new(condition),
         truthy: Box::new(body),
         falsy: falsy_branches,
         location: location.into(),
-    })
+    }))
 }
 
-fn parse_value<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    let Some(Token { kind, .. }) = peek!(lexer) else {
+fn parse_value<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<Expression<'parser>> {
+    let Some(Token { kind, .. }) = peek!(lexer)? else {
         unreachable!();
     };
 
@@ -174,8 +179,8 @@ fn parse_value<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser
     }
 }
 
-fn parse_string<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    let (value, location) = match consume!(lexer) {
+fn parse_string<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<Expression<'parser>> {
+    let (value, location) = match consume!(lexer)? {
         Some(Token {
             kind: Kind::Value(Value::String(string)),
             location,
@@ -184,11 +189,11 @@ fn parse_string<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parse
         _ => unreachable!(),
     };
 
-    Ok(Expression::String { value, location })
+    Ok(Expression::String(StringExpr { value, location }))
 }
 
-fn parse_operation<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    let Some(Token { kind, .. }) = peek!(lexer) else {
+fn parse_operation<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<Expression<'parser>> {
+    let Some(Token { kind, .. }) = peek!(lexer)? else {
         unreachable!();
     };
 
@@ -198,9 +203,9 @@ fn parse_operation<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'pa
 
     match op {
         Operator::LeftParen => {
-            consume!(lexer);
+            consume!(lexer)?;
             let left = parse_with_precedence(lexer, precedences::BASE)?;
-            expect!(lexer, Kind::Op(Operator::RightParen));
+            expect!(lexer, Kind::Op(Operator::RightParen))?;
 
             Ok(left)
         }
@@ -212,18 +217,18 @@ fn parse_operation<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'pa
 fn parse_fun_call<'parser>(
     lexer: &mut Lexer<'parser>,
     ident: Expression<'parser>,
-) -> Result<Expression<'parser>, String> {
-    consume!(lexer);
+) -> miette::Result<Expression<'parser>> {
+    consume!(lexer)?;
 
     let mut arguments = vec![];
 
     loop {
-        match peek!(lexer) {
+        match peek!(lexer)? {
             Some(token) if matches!(token.kind, Kind::Op(Operator::RightParen)) => {
                 break;
             }
             Some(token) if matches!(token.kind, Kind::Op(Operator::Comma)) => {
-                lexer.next().transpose().map_err(|e| e.to_string())?;
+                lexer.next().transpose()?;
                 continue;
             }
             None => break,
@@ -235,23 +240,23 @@ fn parse_fun_call<'parser>(
         arguments.push(arg);
     }
 
-    let close_paren = expect!(lexer, Kind::Op(Operator::RightParen));
+    let close_paren = expect!(lexer, Kind::Op(Operator::RightParen))?;
 
-    let Expression::Ident { name, .. } = ident else { unreachable!() };
+    let Expression::Ident(IdentExpr { name, .. }) = ident else { unreachable!() };
 
     let location = ident.location().start_byte..close_paren.location.end_byte;
-    let expr = Expression::FunCall {
+    let expr = Expression::FunCall(FunCallExpr {
         ident: name,
         location: location.into(),
         arguments,
-    };
+    });
     Ok(expr)
 }
 
-pub fn parse_type_annotation<'parser>(lexer: &mut Lexer<'parser>) -> Result<Type<'parser>, String> {
-    match peek!(lexer) {
-        Some(token) if matches!(token.kind, Kind::Op(Operator::Colon)) => consume!(lexer),
-        Some(token) if matches!(token.kind, Kind::Op(Operator::ThickArrow)) => consume!(lexer),
+pub fn parse_type_annotation<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<Type<'parser>> {
+    match peek!(lexer)? {
+        Some(token) if matches!(token.kind, Kind::Op(Operator::Colon)) => consume!(lexer)?,
+        Some(token) if matches!(token.kind, Kind::Op(Operator::ThickArrow)) => consume!(lexer)?,
         _ => unreachable!(),
     };
 
@@ -261,10 +266,10 @@ pub fn parse_type_annotation<'parser>(lexer: &mut Lexer<'parser>) -> Result<Type
     Ok(arg_type)
 }
 
-fn parse_assign<'parser>(lexer: &mut Lexer<'parser>, left: Expression<'parser>) -> Result<Expression<'parser>, String> {
-    expect!(lexer, Kind::Op(Operator::Equal));
+fn parse_assign<'parser>(lexer: &mut Lexer<'parser>, left: Expression<'parser>) -> miette::Result<Expression<'parser>> {
+    expect!(lexer, Kind::Op(Operator::Equal))?;
 
-    let value = match peek!(lexer) {
+    let value = match peek!(lexer)? {
         Some(token) if matches!(token.kind, Kind::Op(Operator::LeftBrace)) => parse_expr_block(lexer)?,
         Some(_) => parse_expression(lexer)?,
         _ => unreachable!(),
@@ -272,18 +277,18 @@ fn parse_assign<'parser>(lexer: &mut Lexer<'parser>, left: Expression<'parser>) 
 
     let location = left.location().start_byte..value.location().end_byte;
 
-    Ok(Expression::Assign {
+    Ok(Expression::Assign(AssignExpr {
         ident: Box::new(left),
         location: location.into(),
         value: Box::new(value),
-    })
+    }))
 }
 
 fn parse_with_precedence<'parser>(
     lexer: &mut Lexer<'parser>,
     min_precedence: u8,
-) -> Result<Expression<'parser>, String> {
-    let mut left = match peek!(lexer) {
+) -> miette::Result<Expression<'parser>> {
+    let mut left = match peek!(lexer)? {
         Some(token) if matches!(token.kind, Kind::Value(_)) => parse_value(lexer)?,
         Some(token) if matches!(token.kind, Kind::Op(_)) => parse_operation(lexer)?,
         Some(token) if matches!(token.kind, Kind::Return) => parse_return_expression(lexer)?,
@@ -293,17 +298,17 @@ fn parse_with_precedence<'parser>(
     };
 
     if let Expression::Ident { .. } = left {
-        match peek!(lexer) {
+        match peek!(lexer)? {
             Some(token) if matches!(token.kind, Kind::Op(Operator::LeftParen)) => {
                 return parse_fun_call(lexer, left);
             }
             Some(token) if matches!(token.kind, Kind::Op(Operator::Equal)) => return parse_assign(lexer, left),
-            _ => (),
+            _ => unreachable!("this should not be allowed"),
         }
     }
 
     loop {
-        let Some(next) = peek!(lexer) else {
+        let Some(next) = peek!(lexer)? else {
             return Ok(left);
         };
 
@@ -321,40 +326,40 @@ fn parse_with_precedence<'parser>(
             break;
         }
 
-        let Some(_) = consume!(lexer) else {
+        let Some(_) = consume!(lexer)? else {
             unreachable!();
         };
 
         let right = parse_with_precedence(lexer, precedence)?;
 
         let location = Location::new(left.location().start_byte, right.location().end_byte);
-        left = Expression::BinaryOp {
+        left = Expression::BinaryOp(BinaryOpExpr {
             lhs: Box::new(left),
             operator,
             rhs: Box::new(right),
             location,
-        };
+        });
     }
 
     Ok(left)
 }
 
-fn parse_return_expression<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    let keyword = expect!(lexer, Kind::Return);
+fn parse_return_expression<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<Expression<'parser>> {
+    let keyword = expect!(lexer, Kind::Return)?;
 
     let value = parse_expression(lexer)?;
 
-    let ending_semi = expect!(lexer, Kind::Op(Operator::SemiColon));
+    let ending_semi = expect!(lexer, Kind::Op(Operator::SemiColon))?;
 
     let location = keyword.location.start_byte..ending_semi.location.end_byte;
-    Ok(Expression::Return {
+    Ok(Expression::Return(ReturnExpr {
         value: Box::new(value),
         location: location.into(),
-    })
+    }))
 }
 
-fn parse_primitive<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'parser>, String> {
-    let (primitive, location) = match consume!(lexer) {
+fn parse_primitive<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<Expression<'parser>> {
+    let (primitive, location) = match consume!(lexer)? {
         Some(Token {
             kind: Kind::Value(Value::Primitive(primitive)),
             location,
@@ -364,27 +369,28 @@ fn parse_primitive<'parser>(lexer: &mut Lexer<'parser>) -> Result<Expression<'pa
     };
 
     match primitive {
-        Primitive::Int { value, size } => Ok(Expression::IntLiteral { value, size, location }),
-        Primitive::Float { value, size } => Ok(Expression::FloatLiteral { value, size, location }),
-        Primitive::Bool(value) => Ok(Expression::Bool { value, location }),
+        Primitive::Int { value, size } => Ok(Expression::IntLiteral(IntLiteralExpr { value, size, location })),
+        Primitive::Float { value, size } => Ok(Expression::FloatLiteral(FloatLiteralExpr { value, size, location })),
+        Primitive::Bool(value) => Ok(Expression::Bool(BoolExpr { value, location })),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::*;
     use crate::Parser;
 
-    fn make_sut(source: &str) -> Parser<'_> {
-        let lexer = Lexer::new(source);
+    fn make_sut(source: &str, source_arc: Arc<String>) -> Parser<'_> {
+        let lexer = Lexer::new(source, source_arc);
         Parser::new(source, lexer)
     }
 
     #[test]
     fn simple_math() {
-        let simple_math_expr = "1 + 2 * 3 - 4";
-
-        let mut parser = make_sut(simple_math_expr);
+        let simple_math_expr = Arc::new("1 + 2 * 3 - 4".to_string());
+        let mut parser = make_sut(simple_math_expr.as_ref(), simple_math_expr.clone());
 
         let math_expr_ast = match parse_expression(&mut parser.lexer) {
             Ok(expr) => expr,
@@ -396,8 +402,8 @@ mod tests {
 
     #[test]
     fn mutable_variable() {
-        let variables = "var hello = 1 + 2 * 3;";
-        let mut parser = make_sut(variables);
+        let variables = Arc::new("var hello = 1 + 2 * 3;".to_string());
+        let mut parser = make_sut(variables.as_ref(), variables.clone());
 
         let variables_ast = match parse_expression(&mut parser.lexer) {
             Ok(expr) => expr,
@@ -409,8 +415,8 @@ mod tests {
 
     #[test]
     fn immutable_constant() {
-        let variables = "const hello = 1 + 2 * 3;";
-        let mut parser = make_sut(variables);
+        let variables = Arc::new("const hello = 1 + 2 * 3;".to_string());
+        let mut parser = make_sut(variables.as_ref(), variables.clone());
 
         let variables_ast = match parse_expression(&mut parser.lexer) {
             Ok(expr) => expr,
@@ -431,7 +437,8 @@ mod tests {
                 const omg = 1 + 1;
             }
         "#;
-        let mut parser = make_sut(source);
+        let source = Arc::new(source.to_string());
+        let mut parser = make_sut(source.as_ref(), source.clone());
 
         let if_ast = match parse_expression(&mut parser.lexer) {
             Ok(expr) => expr,
@@ -450,8 +457,9 @@ mod tests {
                 20 + 20
             };
         "#;
+        let source = Arc::new(source.to_string());
 
-        let mut parser = make_sut(source);
+        let mut parser = make_sut(source.as_ref(), source.clone());
         let let_if_ast = match parse_expression(&mut parser.lexer) {
             Ok(expr) => expr,
             Err(e) => panic!("{e:?}"),

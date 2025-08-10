@@ -4,7 +4,7 @@ use super::value::Value;
 use super::{IntoToken, Token};
 use crate::error::Error;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub enum Kind<'tok> {
     Value(Value<'tok>),
     Op(Operator),
@@ -25,8 +25,8 @@ pub enum Kind<'tok> {
 impl std::fmt::Display for Kind<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Kind::Value(val) => write!(f, "{}", val),
-            Kind::Op(op) => write!(f, "{}", op),
+            Kind::Value(val) => write!(f, "{val}"),
+            Kind::Op(op) => write!(f, "{op}"),
             Kind::Var => write!(f, "var"),
             Kind::Const => write!(f, "const"),
             //Kind::Match => write!(f, "match"),
@@ -52,7 +52,8 @@ impl<'tok> Kind<'tok> {
             | Kind::Op(Operator::Greater)
             | Kind::Op(Operator::GreaterEqual) => Ok((3, 4)),
             Kind::Op(Operator::Star) | Kind::Op(Operator::Slash) => Ok((5, 6)),
-            _ => Err(Error::default()),
+            _ => todo!(),
+            // _ => Err(Error::default()),
         }
     }
 

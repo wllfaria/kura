@@ -1,559 +1,238 @@
 use std::collections::HashMap;
 
-use kura_lexer::token::primitive::{FloatSizes, IntSizes, Numeral};
-use kura_parser::ast::{Expression, FunArgument, PrimitiveType, Statement, Type as ParserType};
+use kura_lexer::token::Location;
+use kura_parser::ast::*;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-enum Type<'ast> {
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+struct FunctionId(usize);
+
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+struct TypeId(usize);
+
+impl TypeId {
+    pub fn next(&self) -> Self {
+        Self(self.0 + 1)
+    }
+}
+
+#[derive(Debug)]
+struct ResolvedFunDecl<'src> {
+    name: &'src str,
+    return_type: Option<TypeStatus<'src>>,
+    location: Location,
+    args: Vec<ResolvedFunArgDecl<'src>>,
+}
+
+#[derive(Debug)]
+struct ResolvedFunArgDecl<'src> {
+    name: &'src str,
+    ty: TypeStatus<'src>,
+    location: Location,
+}
+
+#[derive(Debug)]
+struct ResolvedStruct<'src> {
+    name: &'src str,
+    type_id: TypeId,
+    location: Location,
+    fields: Vec<ResolvedStructField<'src>>,
+}
+
+#[derive(Debug)]
+enum TypeValue<'ast> {
+    Struct(ResolvedStruct<'ast>),
     Primitive(PrimitiveType),
-    Defined(&'ast str),
 }
 
-impl From<PrimitiveType> for Type<'_> {
-    fn from(ty: PrimitiveType) -> Self {
-        Self::Primitive(ty)
-    }
+#[derive(Debug)]
+enum ResolvedType {
+    Primitive(PrimitiveType),
+    Struct(TypeId),
 }
 
-impl<'ast> From<&'ast str> for Type<'ast> {
-    fn from(name: &'ast str) -> Self {
-        Self::Defined(name)
-    }
+#[derive(Debug)]
+enum TypeStatus<'ast> {
+    Resolved(ResolvedType),
+    Pending(NamedType<'ast>),
 }
 
-impl<'ast> From<ParserType<'ast>> for Type<'ast> {
-    fn from(ty: ParserType<'ast>) -> Self {
-        match ty {
-            ParserType::Primitive { ty, .. } => ty.into(),
-            ParserType::Defined { name, .. } => name.into(),
+impl<'ast> From<Type<'ast>> for TypeStatus<'ast> {
+    fn from(value: Type<'ast>) -> Self {
+        match value {
+            Type::Primitive(primitive) => TypeStatus::Resolved(ResolvedType::Primitive(primitive)),
+            Type::Named(named_type) => TypeStatus::Pending(named_type),
         }
     }
 }
 
 #[derive(Debug)]
-struct TypedFunArgument<'ast> {
+struct ResolvedStructField<'ast> {
     name: &'ast str,
-    ty: Type<'ast>,
+    ty: TypeStatus<'ast>,
+    location: Location,
 }
 
-impl<'ast> From<&FunArgument<'ast>> for TypedFunArgument<'ast> {
-    fn from(arg: &FunArgument<'ast>) -> Self {
+impl<'ast> From<&StructField<'ast>> for ResolvedStructField<'ast> {
+    fn from(value: &StructField<'ast>) -> Self {
         Self {
-            name: arg.name,
-            ty: arg.ty.into(),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
-pub enum FloatNumeral {
-    F32(f32),
-    F64(f64),
-}
-
-#[derive(Debug)]
-enum TypedStatement<'ast> {
-    Fun {
-        name: &'ast str,
-        body: TypedExpression<'ast>,
-        return_type: Type<'ast>,
-        arguments: Vec<TypedFunArgument<'ast>>,
-    },
-}
-
-#[derive(Debug)]
-enum TypedExpression<'ast> {
-    Var {
-        mutable: bool,
-        name: &'ast str,
-        ty: Type<'ast>,
-        value: Box<TypedExpression<'ast>>,
-    },
-    IntLiteral {
-        value: Numeral,
-        ty: Type<'ast>,
-    },
-    FloatLiteral {
-        value: FloatNumeral,
-        ty: Type<'ast>,
-    },
-    FunCall {
-        ident: &'ast str,
-        arguments: Vec<TypedExpression<'ast>>,
-        ty: Type<'ast>,
-    },
-    Ident {
-        name: &'ast str,
-        ty: Type<'ast>,
-    },
-    Block {
-        body: Vec<TypedExpression<'ast>>,
-        trailing_expr: Option<Box<TypedExpression<'ast>>>,
-        ty: Type<'ast>,
-    },
-    Bool {
-        value: bool,
-        ty: Type<'ast>,
-    },
-    Assign {
-        ident: Box<TypedExpression<'ast>>,
-        value: Box<TypedExpression<'ast>>,
-        ty: Type<'ast>,
-    },
-    String {
-        value: &'ast str,
-        ty: Type<'ast>,
-    },
-}
-
-impl<'ast> TypedExpression<'ast> {
-    fn ty(&self) -> Type<'ast> {
-        match self {
-            Self::Var { ty, .. } => *ty,
-            Self::IntLiteral { ty, .. } => *ty,
-            Self::FunCall { ty, .. } => *ty,
-            Self::Ident { ty, .. } => *ty,
-            Self::Block { ty, .. } => *ty,
-            Self::Bool { ty, .. } => *ty,
-            Self::FloatLiteral { ty, .. } => *ty,
-            Self::Assign { ty, .. } => *ty,
-            Self::String { ty, .. } => *ty,
-        }
-    }
-
-    fn is_mutable(&self) -> bool {
-        match self {
-            Self::Var { mutable, .. } => *mutable,
-            _ => false,
+            name: value.name,
+            ty: value.ty.into(),
+            location: value.location,
         }
     }
 }
 
 #[derive(Debug)]
-struct FunctionSignature<'ast> {
-    arguments: Vec<Type<'ast>>,
-    return_type: Type<'ast>,
+struct TypedBoolExpr {
+    value: bool,
+    location: Location,
+    ty: ResolvedType,
 }
 
 #[derive(Debug)]
-struct Functions<'ast> {
-    inner: HashMap<&'ast str, FunctionSignature<'ast>>,
+enum TypedExpression {
+    Bool(TypedBoolExpr),
 }
 
-impl Functions<'_> {
-    fn get(&self, name: &str) -> Option<&FunctionSignature<'_>> {
-        self.inner.get(name)
-    }
+#[derive(Debug)]
+pub struct Typer<'src> {
+    types: Vec<TypeValue<'src>>,
+    type_ids: HashMap<&'src str, TypeId>,
+    functions: HashMap<&'src str, ResolvedFunDecl<'src>>,
+    next_type_id: TypeId,
 }
 
-impl<'ast> From<(&Vec<FunArgument<'ast>>, &Option<ParserType<'ast>>)> for FunctionSignature<'ast> {
-    fn from((arguments, return_type): (&Vec<FunArgument<'ast>>, &Option<ParserType<'ast>>)) -> Self {
+impl<'src> Typer<'src> {
+    pub fn new() -> Self {
         Self {
-            arguments: arguments.iter().map(|arg| arg.ty.into()).collect(),
-            return_type: return_type.map(Into::into).unwrap_or(PrimitiveType::Unit.into()),
+            types: Vec::new(),
+            type_ids: HashMap::new(),
+            next_type_id: TypeId(0),
+            functions: HashMap::new(),
         }
     }
-}
 
-impl<'ast> From<&[Statement<'ast>]> for Functions<'ast> {
-    fn from(program: &[Statement<'ast>]) -> Self {
-        Self {
-            inner: program.iter().fold(HashMap::new(), |mut acc, stat| {
-                match stat {
-                    Statement::Fun {
+    pub fn typecheck_ast(&mut self, ast: Vec<Statement<'src>>) {
+        self.collect_type_declarations(&ast);
+        self.resolve_type_declarations();
+        self.collect_function_declarations(&ast);
+
+        for statement in ast {
+            let Statement::Fun(fun) = statement else { continue };
+            self.typecheck_function(fun);
+        }
+
+        println!("{self:?}");
+    }
+
+    fn collect_type_declarations(&mut self, ast: &[Statement<'src>]) {
+        for statement in ast {
+            match statement {
+                Statement::Struct { name, fields, location } => {
+                    let fields = fields.iter().map(Into::into).collect();
+                    let type_id = self.next_type_id;
+
+                    let st = ResolvedStruct {
                         name,
-                        arguments,
-                        return_type,
-                        ..
-                    } => _ = acc.insert(name, (arguments, return_type).into()),
-                    Statement::Struct { .. } => (),
+                        fields,
+                        type_id,
+                        location: *location,
+                    };
+
+                    self.types.push(TypeValue::Struct(st));
+                    self.type_ids.insert(name, type_id);
+                    self.next_type_id = self.next_type_id.next();
+                }
+                Statement::Fun { .. } => {}
+            }
+        }
+    }
+
+    fn resolve_type_declarations(&mut self) {
+        for ty in self.types.iter_mut() {
+            let TypeValue::Struct(st) = ty else { continue };
+
+            for field in st.fields.iter_mut() {
+                let TypeStatus::Pending(named) = field.ty else { continue };
+                let Some(type_id) = self.type_ids.get(named.name) else { unreachable!() };
+                field.ty = TypeStatus::Resolved(ResolvedType::Struct(*type_id));
+            }
+        }
+    }
+
+    fn collect_function_declarations(&mut self, ast: &[Statement<'src>]) {
+        for statement in ast {
+            let Statement::Fun(fun) = statement else { continue };
+
+            let mut typed_args = vec![];
+            for arg in fun.arguments.iter() {
+                let arg_ty = match arg.ty {
+                    Type::Primitive(primitive) => TypeStatus::Resolved(ResolvedType::Primitive(primitive)),
+                    Type::Named(named_type) => {
+                        let Some(type_id) = self.type_ids.get(named_type.name) else { unreachable!() };
+                        TypeStatus::Resolved(ResolvedType::Struct(*type_id))
+                    }
                 };
+                let arg = ResolvedFunArgDecl {
+                    name: arg.name,
+                    ty: arg_ty,
+                    location: arg.location,
+                };
+                typed_args.push(arg);
+            }
 
-                acc
+            let return_type = match fun.return_type {
+                Some(ty) => match ty {
+                    Type::Primitive(primitive) => Some(TypeStatus::Resolved(ResolvedType::Primitive(primitive))),
+                    Type::Named(named_type) => {
+                        let Some(type_id) = self.type_ids.get(named_type.name) else { unreachable!() };
+                        Some(TypeStatus::Resolved(ResolvedType::Struct(*type_id)))
+                    }
+                },
+                None => None,
+            };
+
+            let declaration = ResolvedFunDecl {
+                name: fun.name,
+                location: fun.location,
+                args: typed_args,
+                return_type,
+            };
+
+            self.functions.insert(fun.name, declaration);
+        }
+    }
+
+    fn typecheck_expression(&self, expr: &Expression<'src>) -> TypedExpression {
+        match expr {
+            Expression::Bool(expr) => TypedExpression::Bool(TypedBoolExpr {
+                value: expr.value,
+                location: expr.location,
+                ty: ResolvedType::Primitive(PrimitiveType::new(PrimitiveTypeKind::Bool, expr.location)),
             }),
-        }
-    }
-}
 
-#[derive(Debug)]
-struct Context<'a> {
-    scopes: Vec<HashMap<&'a str, Type<'a>>>,
-}
+            Expression::FloatLiteral(expr) => todo!(),
+            Expression::IntLiteral(expr) => todo!(),
 
-impl<'a> Context<'a> {
-    pub fn enter_scope(&mut self) {
-        self.scopes.push(HashMap::new());
-    }
-
-    pub fn exit_scope(&mut self) {
-        self.scopes.pop();
-    }
-
-    pub fn get_scope(&mut self) -> &mut HashMap<&'a str, Type<'a>> {
-        self.scopes.last_mut().unwrap()
-    }
-}
-
-pub fn typecheck_program(program: &[Statement<'_>]) {
-    let functions = Functions::from(program);
-    let mut ctxs = HashMap::new();
-    let mut ast = vec![];
-
-    for statement in program {
-        match statement {
-            Statement::Fun { name, .. } => {
-                ctxs.insert(name, Context { scopes: vec![] });
-                let ctx = ctxs.get_mut(name).unwrap();
-                ctx.enter_scope();
-
-                let stat = typecheck_function(ctx, &functions, statement);
-                ast.push(stat);
-            }
-            Statement::Struct { .. } => (),
-        }
-    }
-}
-
-fn typecheck_function<'ast>(
-    ctx: &mut Context<'ast>,
-    functions: &'ast Functions<'ast>,
-    function: &Statement<'ast>,
-) -> TypedStatement<'ast> {
-    let Statement::Fun {
-        name,
-        arguments,
-        body,
-        return_type,
-        ..
-    } = function
-    else {
-        unreachable!()
-    };
-
-    for arg in arguments {
-        let ty = arg.ty.into();
-        ctx.get_scope().insert(arg.name, ty);
-    }
-
-    let return_type = return_type.map(Into::into).unwrap_or(PrimitiveType::Unit.into());
-    let body = typecheck_expression(ctx, functions, body, None);
-
-    if return_type != body.ty() {
-        panic!("expected return type {return_type:?} but got {:?}", body.ty())
-    }
-
-    TypedStatement::Fun {
-        name,
-        body,
-        arguments: arguments.iter().map(Into::into).collect(),
-        return_type,
-    }
-}
-
-fn typecheck_expression<'ast>(
-    ctx: &mut Context<'ast>,
-    functions: &'ast Functions<'ast>,
-    expr: &Expression<'ast>,
-    expected_ty: Option<Type<'ast>>,
-) -> TypedExpression<'ast> {
-    match expr {
-        Expression::Var { .. } => typecheck_var(ctx, functions, expr),
-        Expression::FunCall { .. } => typecheck_fun_call(ctx, functions, expr),
-        Expression::Block { .. } => typecheck_block(ctx, functions, expr),
-        Expression::Assign { .. } => typecheck_assign(ctx, functions, expr),
-
-        Expression::If { .. } => typecheck_if(ctx, functions, expr),
-        Expression::BinaryOp { .. } => typecheck_binop(ctx, functions, expr),
-
-        Expression::IntLiteral { .. } => typecheck_uint(expr, expected_ty),
-        Expression::FloatLiteral { .. } => typecheck_float(expr, expected_ty),
-
-        Expression::Ident { .. } => typecheck_ident(ctx, expr),
-
-        Expression::Bool { .. } => typecheck_bool(expr),
-
-        Expression::Return { .. } => todo!(),
-
-        Expression::String { .. } => todo!(),
-    }
-}
-
-fn typecheck_binop<'ast>(
-    ctx: &mut Context<'ast>,
-    functions: &'ast Functions<'ast>,
-    expr: &Expression<'ast>,
-) -> TypedExpression<'ast> {
-    let Expression::BinaryOp { lhs, operator, rhs, .. } = expr else { unreachable!() };
-
-    let lhs = typecheck_expression(ctx, functions, lhs, None);
-    let rhs = typecheck_expression(ctx, functions, rhs, None);
-
-    todo!();
-}
-
-fn typecheck_if<'ast>(
-    ctx: &mut Context<'ast>,
-    functions: &'ast Functions<'ast>,
-    expr: &Expression<'ast>,
-) -> TypedExpression<'ast> {
-    let Expression::If {
-        condition,
-        truthy,
-        falsy,
-        ..
-    } = expr
-    else {
-        unreachable!()
-    };
-
-    println!("typechecking if statement");
-
-    let condition = typecheck_expression(ctx, functions, condition, None);
-
-    let truthy = typecheck_expression(ctx, functions, truthy, None);
-
-    todo!();
-}
-
-fn typecheck_assign<'ast>(
-    ctx: &mut Context<'ast>,
-    functions: &'ast Functions<'ast>,
-    expr: &Expression<'ast>,
-) -> TypedExpression<'ast> {
-    let Expression::Assign { ident, value, .. } = expr else { unreachable!() };
-
-    let ident = typecheck_expression(ctx, functions, ident, None);
-    let value = typecheck_expression(ctx, functions, value, None);
-
-    if !ident.is_mutable() {
-        panic!("cannot assign to immutable variable");
-    }
-
-    if ident.ty() != value.ty() {
-        panic!("expected type {:?} but got {:?}", ident.ty(), value.ty());
-    }
-
-    TypedExpression::Assign {
-        ty: ident.ty(),
-        ident: Box::new(ident),
-        value: Box::new(value),
-    }
-}
-
-fn typecheck_bool<'ast>(expr: &Expression<'ast>) -> TypedExpression<'ast> {
-    let Expression::Bool { value, .. } = expr else { unreachable!() };
-
-    TypedExpression::Bool {
-        value: *value,
-        ty: PrimitiveType::Bool.into(),
-    }
-}
-
-fn typecheck_block<'ast>(
-    ctx: &mut Context<'ast>,
-    functions: &'ast Functions<'ast>,
-    expr: &Expression<'ast>,
-) -> TypedExpression<'ast> {
-    let Expression::Block {
-        body, trailing_expr, ..
-    } = expr
-    else {
-        unreachable!()
-    };
-
-    let mut typed_body = vec![];
-
-    for expr in body {
-        let expr = typecheck_expression(ctx, functions, expr, None);
-        typed_body.push(expr);
-    }
-
-    let trailing_expr = trailing_expr
-        .as_ref()
-        .map(|trailing_expr| Box::new(typecheck_expression(ctx, functions, trailing_expr, None)));
-
-    TypedExpression::Block {
-        body: typed_body,
-        ty: trailing_expr
-            .as_ref()
-            .map(|expr| expr.ty())
-            .unwrap_or(PrimitiveType::Unit.into()),
-        trailing_expr,
-    }
-}
-
-fn typecheck_var<'ast>(
-    ctx: &mut Context<'ast>,
-    functions: &'ast Functions<'ast>,
-    expr: &Expression<'ast>,
-) -> TypedExpression<'ast> {
-    let Expression::Var { value, name, ty, .. } = expr else { unreachable!() };
-    let expected_ty = ty.map(Into::into);
-    let expr = typecheck_expression(ctx, functions, value, expected_ty);
-
-    if let Some(expected_ty) = expected_ty {
-        if expected_ty != expr.ty() {
-            panic!("expected type {expected_ty:?} but got {ty:?}")
+            Expression::Var(expr) => todo!(),
+            Expression::If(expr) => todo!(),
+            Expression::FunCall(expr) => todo!(),
+            Expression::Assign(expr) => todo!(),
+            Expression::Ident(expr) => todo!(),
+            Expression::Block(expr) => todo!(),
+            Expression::BinaryOp(expr) => todo!(),
+            Expression::Return(expr) => todo!(),
+            Expression::String(expr) => todo!(),
         }
     }
 
-    let scope = ctx.get_scope();
-    scope.insert(name, expr.ty());
-
-    expr
-}
-
-fn typecheck_fun_call<'ast>(
-    ctx: &mut Context<'ast>,
-    functions: &'ast Functions<'ast>,
-    expr: &Expression<'ast>,
-) -> TypedExpression<'ast> {
-    let Expression::FunCall { ident, arguments, .. } = expr else { unreachable!() };
-    let fun = functions.get(ident).expect("function not found");
-
-    if fun.arguments.len() != arguments.len() {
-        panic!(
-            "expected {} argument(s) but got {}",
-            fun.arguments.len(),
-            arguments.len()
-        );
-    }
-
-    let arguments = arguments
-        .iter()
-        .zip(fun.arguments.iter())
-        .map(|(arg, expected_ty)| {
-            let expr = typecheck_expression(ctx, functions, arg, Some(*expected_ty));
-            if expr.ty() != *expected_ty {
-                panic!("expected type {expected_ty:?} but got {:?}", expr.ty())
-            }
-            expr
-        })
-        .collect();
-
-    TypedExpression::FunCall {
-        ty: fun.return_type,
-        ident,
-        arguments,
+    fn typecheck_function(&mut self, fun: FunStatement) {
+        // let typed_body = self.typecheck_expression(&fun.body);
     }
 }
 
-fn typecheck_ident<'ast>(ctx: &mut Context<'ast>, expr: &Expression<'ast>) -> TypedExpression<'ast> {
-    let Expression::Ident { name, .. } = expr else { unreachable!() };
-
-    let ty = *ctx.get_scope().get(name).expect("variable not found");
-    TypedExpression::Ident { ty, name }
-}
-
-fn typecheck_uint<'ast>(expr: &Expression<'ast>, expected_ty: Option<Type<'ast>>) -> TypedExpression<'ast> {
-    let Expression::IntLiteral { value, size, .. } = expr else { unreachable!() };
-
-    let expected_ty = match expected_ty {
-        Some(Type::Primitive(ty)) => match ty {
-            PrimitiveType::U8 => IntSizes::U8,
-            PrimitiveType::U16 => IntSizes::U16,
-            PrimitiveType::U32 => IntSizes::U32,
-            PrimitiveType::U64 => IntSizes::U64,
-            PrimitiveType::Usize => IntSizes::Usize,
-            PrimitiveType::I8 => IntSizes::I8,
-            PrimitiveType::I16 => IntSizes::I16,
-            PrimitiveType::I32 => IntSizes::I32,
-            PrimitiveType::I64 => IntSizes::I64,
-            PrimitiveType::Isize => IntSizes::Isize,
-            _ => IntSizes::I32,
-        },
-        Some(Type::Defined(_)) => IntSizes::I32,
-        None => IntSizes::I32,
-    };
-
-    let size = size.unwrap_or(expected_ty);
-    let ty = match (size, value) {
-        (IntSizes::U8, Numeral::Unsigned(val)) if *val > u8::MAX.into() => panic!("value is too big for u8"),
-        (IntSizes::U16, Numeral::Unsigned(val)) if *val > u16::MAX.into() => panic!("value is too big for u16"),
-        (IntSizes::U32, Numeral::Unsigned(val)) if *val > u32::MAX.into() => panic!("value is too big for u32"),
-        (IntSizes::Usize, Numeral::Unsigned(val)) if *val > usize::MAX as u64 => panic!("value is too big for usize"),
-
-        (IntSizes::I8, Numeral::Unsigned(val)) if *val > i8::MAX as u64 => panic!("value is too big for i8"),
-        (IntSizes::I16, Numeral::Unsigned(val)) if *val > i16::MAX as u64 => panic!("value is too big for i16"),
-        (IntSizes::I32, Numeral::Unsigned(val)) if *val > i32::MAX as u64 => panic!("value is too big for i32"),
-        (IntSizes::Isize, Numeral::Unsigned(val)) if *val > isize::MAX as u64 => panic!("value is too big for isize"),
-
-        (IntSizes::I8, Numeral::Signed(val)) if *val > i8::MAX as i64 => panic!("value is too big for i8"),
-        (IntSizes::I16, Numeral::Signed(val)) if *val > i16::MAX as i64 => panic!("value is too big for i16"),
-        (IntSizes::I32, Numeral::Signed(val)) if *val > i32::MAX as i64 => panic!("value is too big for i32"),
-        (IntSizes::Isize, Numeral::Signed(val)) if *val > isize::MAX as i64 => panic!("value is too big for isize"),
-
-        (IntSizes::I8, Numeral::Signed(val)) if *val < i8::MIN as i64 => panic!("value is too small for i8"),
-        (IntSizes::I16, Numeral::Signed(val)) if *val < i16::MIN as i64 => panic!("value is too small for i16"),
-        (IntSizes::I32, Numeral::Signed(val)) if *val < i32::MIN as i64 => panic!("value is too small for i32"),
-        (IntSizes::Isize, Numeral::Signed(val)) if *val < isize::MIN as i64 => panic!("value is too small for isize"),
-
-        (_, Numeral::Signed(_)) if size.is_unsigned() => panic!("cannot assign signed value to unsigned type"),
-        _ => PrimitiveType::from(size).into(),
-    };
-
-    TypedExpression::IntLiteral { ty, value: *value }
-}
-
-fn typecheck_float<'ast>(expr: &Expression<'ast>, expected_ty: Option<Type<'ast>>) -> TypedExpression<'ast> {
-    let Expression::FloatLiteral { value, size, .. } = expr else { unreachable!() };
-
-    let expected_ty = match expected_ty {
-        Some(Type::Primitive(PrimitiveType::F32)) => FloatSizes::F32,
-        Some(Type::Primitive(PrimitiveType::F64)) => FloatSizes::F64,
-        _ => FloatSizes::F32,
-    };
-
-    let size = size.unwrap_or(expected_ty);
-    let ty = match size {
-        FloatSizes::F32 if *value > f32::MAX as f64 => panic!("value is too big for f32"),
-        FloatSizes::F32 if *value < f32::MIN as f64 => panic!("value is too small for f32"),
-        FloatSizes::F32 => PrimitiveType::F32.into(),
-        _ => PrimitiveType::F64.into(),
-    };
-
-    let value = match ty {
-        Type::Primitive(PrimitiveType::F32) => FloatNumeral::F32(*value as f32),
-        Type::Primitive(PrimitiveType::F64) => FloatNumeral::F64(*value),
-        _ => unreachable!(),
-    };
-
-    TypedExpression::FloatLiteral { ty, value }
-}
-
-#[cfg(test)]
-mod tests {
-    use kura_lexer::Lexer;
-    use kura_parser::Parser;
-
-    use super::*;
-
-    #[test]
-    fn test() {
-        let code = r#"
-fun do_something_with_x(x: i32) => i32 {
-    if x > 10 {
-        return x;
-    }
-    x
-}
-//
-//fun main() {
-//    const x = 10;
-//    const x: i8 = 10;
-//    const x: i16 = 10;
-//    const x: i32 = 10;
-//    do_something_with_x(x);
-//}
-
-        "#;
-
-        let lexer = Lexer::new(code);
-        let parser = Parser::new(code, lexer);
-        let program = parser.parse().unwrap();
-        //println!("program: {program:#?}");
-        typecheck_program(&program);
-
-        panic!();
+impl<'ast> Default for Typer<'ast> {
+    fn default() -> Self {
+        Self::new()
     }
 }

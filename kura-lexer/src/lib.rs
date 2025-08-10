@@ -1,20 +1,25 @@
 pub mod error;
 pub mod token;
 
-use error::Error;
+use std::sync::Arc;
+
+use miette::NamedSource;
 use token::primitive::{FloatSizes, IntSizes, IntoNumeral, Primitive};
 use token::{IntoToken, Kind, Operator, Token, Value};
 
+use crate::error::Error;
+use crate::token::Location;
+
 pub trait TransposeRef<'a, T, E: std::error::Error> {
-    fn transpose(self) -> Result<Option<&'a T>, &'a E>;
+    fn transpose(self) -> Result<Option<&'a T>, E>;
 }
 
 impl<'lex> TransposeRef<'lex, Token<'lex>, Error> for Option<&'lex Result<Token<'lex>, Error>> {
-    fn transpose(self) -> Result<Option<&'lex Token<'lex>>, &'lex Error> {
+    fn transpose(self) -> Result<Option<&'lex Token<'lex>>, Error> {
         match self {
             Some(result) => match result {
                 Ok(token) => Ok(Some(token)),
-                Err(e) => Err(e),
+                Err(e) => Err(e.clone()),
             },
             None => Ok(None),
         }
@@ -22,66 +27,57 @@ impl<'lex> TransposeRef<'lex, Token<'lex>, Error> for Option<&'lex Result<Token<
 }
 
 #[derive(Debug)]
-pub struct Lexer<'lex> {
-    pos: usize,
-    source: &'lex str,
-    pub complete_source: &'lex str,
-    peeked: Option<Result<Token<'lex>, Error>>,
+pub struct Lexer<'src> {
+    pub pos: usize,
+    source: &'src str,
+    pub source_arc: Arc<String>,
+    peeked: Option<Result<Token<'src>, Error>>,
 }
 
-impl<'lex> Lexer<'lex> {
-    pub fn new(source: &'lex str) -> Self {
+impl<'src> Lexer<'src> {
+    pub fn new(source: &'src str, source_arc: Arc<String>) -> Self {
         Self {
             pos: 0,
             source,
-            complete_source: source,
+            source_arc,
             peeked: None,
         }
     }
 
     pub fn source_code(&self) -> &str {
-        self.complete_source
+        self.source_arc.as_ref()
     }
 
-    pub fn peek(&mut self) -> Option<&Result<Token<'lex>, Error>> {
+    pub fn peek(&mut self) -> Option<miette::Result<&Token<'src>>> {
         if self.peeked.is_none() {
             self.peeked = self.next();
         }
 
-        self.peeked.as_ref()
+        match self.peeked.as_ref() {
+            Some(Ok(t)) => Some(Ok(t)),
+            Some(Err(e)) => Some(Err(e.clone().into())),
+            None => None,
+        }
     }
 
     pub fn is_empty(&mut self) -> bool {
         self.peek().is_none()
     }
 
-    fn make_token<T>(&mut self, tokenizable: T, size: usize) -> Token<'lex>
+    fn make_token<T>(&mut self, tokenizable: T, size: usize) -> Token<'src>
     where
-        T: IntoToken<'lex>,
+        T: IntoToken<'src>,
     {
         let start_byte = self.pos;
         self.advance_by(size);
         tokenizable.into_token(start_byte, self.pos)
     }
 
-    pub fn expect(&mut self, expected: Kind<'_>) -> Result<Token<'lex>, Error> {
-        let Some(token) = self.next().transpose()? else {
-            let location = self.complete_source.len() - 1..self.complete_source.len();
-            return Err(Error::from(location));
-        };
-        let kind = &token.kind;
-
-        if kind == &expected {
-            Ok(token)
-        } else {
-            Err(Error::new(
-                token.location,
-                format!("expected {expected:?} but got {kind:?}"),
-            ))
-        }
+    pub fn eof_location(&mut self) -> Location {
+        (self.source_arc.len().saturating_sub(1)..self.source_arc.len()).into()
     }
 
-    pub fn expect_one_of(&mut self, expected_list: &[Kind<'_>]) -> Result<Token<'lex>, Error> {
+    pub fn expect_one_of(&mut self, expected_list: &[Kind<'_>]) -> Result<Token<'src>, Error> {
         let token = self.next().transpose()?;
         let location = token.as_ref().map(|token| token.location);
         let kind = token.as_ref().map(|token| &token.kind);
@@ -95,9 +91,12 @@ impl<'lex> Lexer<'lex> {
                 .map(|k| k.to_string())
                 .collect::<Vec<_>>()
                 .join(" ");
+
             Err(Error::new(
                 location.unwrap_or((self.pos, self.pos).into()),
                 format!("expected one of {kinds} but got {kind:?}"),
+                None,
+                NamedSource::new("file.rs", self.source_arc.clone()),
             ))
         }
     }
@@ -294,23 +293,21 @@ impl<'lex> Lexer<'lex> {
             (false, true) => Primitive::Int {
                 value: match literal.as_str().parse_signed() {
                     Ok(numeral) => numeral,
-                    Err(_) => {
-                        return Err(Error::from(self.pos - bytes_eaten..self.pos));
-                    }
+                    Err(_) => unreachable!(),
                 },
                 size: IntSizes::try_from(postfix).ok(),
             },
             (false, false) => Primitive::Int {
                 value: match literal.as_str().parse_unsigned() {
                     Ok(numeral) => numeral,
-                    Err(_) => return Err(Error::from(self.pos - bytes_eaten..self.pos)),
+                    Err(_) => unreachable!(),
                 },
                 size: IntSizes::try_from(postfix).ok(),
             },
             (true, _) => Primitive::Float {
                 value: match literal.parse() {
                     Ok(numeral) => numeral,
-                    Err(_) => return Err(Error::from(self.pos - bytes_eaten..self.pos)),
+                    Err(_) => unreachable!(),
                 },
                 size: FloatSizes::try_from(postfix).ok(),
             },
@@ -352,8 +349,8 @@ impl<'lex> Lexer<'lex> {
 mod tests {
     use super::*;
 
-    fn make_sut(source: &str) -> Lexer<'_> {
-        Lexer::new(source)
+    fn make_sut(source: &str, source_arc: Arc<String>) -> Lexer<'_> {
+        Lexer::new(source, source_arc)
     }
 
     #[test]
@@ -383,11 +380,11 @@ mod tests {
             "3.14159265358979323846264338327950288_f32",
             "3.141592653f32;",
         ];
-        let source = source.join("\n");
+        let source = Arc::new(source.join("\n"));
 
         let mut numerals = vec![];
 
-        for token in make_sut(&source) {
+        for token in make_sut(source.as_ref(), source.clone()) {
             numerals.push(token.unwrap());
         }
 
@@ -401,9 +398,10 @@ mod tests {
             "<", ">", "/", ":", ";", "&&", "||",
         ];
         let source = source.join(" ");
+        let source = Arc::new(source);
 
         let mut punctuations = vec![];
-        for token in make_sut(&source) {
+        for token in make_sut(source.as_ref(), source.clone()) {
             punctuations.push(token.unwrap());
         }
 
@@ -415,9 +413,10 @@ mod tests {
         let source = ["var", "const", "if", "else", "fun", "struct", "return"];
 
         let source = source.join(" ");
+        let source = Arc::new(source.to_string());
 
         let mut builtin_identifiers = vec![];
-        for token in make_sut(&source) {
+        for token in make_sut(source.as_ref(), source.clone()) {
             builtin_identifiers.push(token.unwrap());
         }
 
@@ -437,9 +436,10 @@ mod tests {
         ];
 
         let source = source.join("\n");
+        let source = Arc::new(source);
 
         let mut calculate_circumference_function = vec![];
-        for token in make_sut(&source) {
+        for token in make_sut(source.as_ref(), source.clone()) {
             calculate_circumference_function.push(token.unwrap());
         }
 
@@ -449,9 +449,10 @@ mod tests {
     #[test]
     fn lexing_strings() {
         let source = r#""hello world""#;
+        let source = Arc::new(source.to_string());
 
         let mut strings = vec![];
-        for token in make_sut(source) {
+        for token in make_sut(source.as_ref(), source.clone()) {
             strings.push(token.unwrap());
         }
 
@@ -467,9 +468,10 @@ mod tests {
             yet_another_member: bool,
         }
         "#;
+        let source = Arc::new(source.to_string());
 
         let mut tokens = vec![];
-        for token in make_sut(source) {
+        for token in make_sut(source.as_ref(), source.clone()) {
             tokens.push(token.unwrap());
         }
 

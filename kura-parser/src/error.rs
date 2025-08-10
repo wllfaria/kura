@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
+use kura_lexer::token::Location;
 use miette::{Diagnostic, LabeledSpan, NamedSource, SourceSpan};
 
-use crate::token::Location;
-
 #[derive(Debug, Clone, thiserror::Error)]
-#[error("Unknown token.")]
+#[error("Syntax error")]
 pub struct Error {
     label_span: SourceSpan,
     label_message: String,

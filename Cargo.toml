@@ -1,12 +1,21 @@
 [workspace]
+resolver = "2"
 members = [
     "kura-lexer",
     "kura-parser",
     "kura-typer",
+    "kura-testbed",
 ]
-resolver = "2"
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
 
 [workspace.dependencies]
 kura-lexer = { path = "./kura-lexer" }
 kura-parser = { path = "./kura-parser" }
 kura-typer = { path = "./kura-typer" }
+kura-testbed = { path = "./kura-testbed" }
+
+miette = { version = "7.6.0", features = ["fancy"] }
+thiserror = "2.0.12"
