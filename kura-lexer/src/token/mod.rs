@@ -14,7 +14,7 @@ pub trait IntoToken<'tok> {
     fn into_token(self, start_byte: usize, end_byte: usize) -> Token<'tok>;
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Location {
     pub start_byte: usize,
     pub end_byte: usize,

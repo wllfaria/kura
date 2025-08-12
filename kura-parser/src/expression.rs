@@ -303,6 +303,7 @@ fn parse_with_precedence<'parser>(
                 return parse_fun_call(lexer, left);
             }
             Some(token) if matches!(token.kind, Kind::Op(Operator::Equal)) => return parse_assign(lexer, left),
+            Some(token) if token.kind.is_binary_op() => {}
             _ => unreachable!("this should not be allowed"),
         }
     }

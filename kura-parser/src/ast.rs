@@ -99,7 +99,7 @@ impl From<FloatSizes> for PrimitiveTypeKind {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PrimitiveType {
     pub kind: PrimitiveTypeKind,
     pub location: Location,

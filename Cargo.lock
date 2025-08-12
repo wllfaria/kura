@@ -140,6 +140,7 @@ version = "0.1.0"
 dependencies = [
  "kura-lexer",
  "kura-parser",
+ "miette",
 ]
 
 [[package]]

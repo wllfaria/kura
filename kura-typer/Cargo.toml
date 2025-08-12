@@ -6,3 +6,4 @@ edition.workspace = true
 [dependencies]
 kura-parser.workspace = true
 kura-lexer.workspace = true
+miette.workspace = true
