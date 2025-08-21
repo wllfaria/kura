@@ -141,6 +141,7 @@ dependencies = [
  "kura-lexer",
  "kura-parser",
  "miette",
+ "thiserror",
 ]
 
 [[package]]

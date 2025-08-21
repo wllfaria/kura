@@ -1,4 +1,4 @@
-use kura_lexer::token::primitive::{FloatSizes, IntSizes, Numeral};
+use kura_lexer::token::primitive::{FloatSizes, IntSize, Numeral};
 use kura_lexer::token::{Location, Operator};
 
 static PRIMITIVE_MAP: &[(&str, PrimitiveTypeKind)] = &[
@@ -6,10 +6,12 @@ static PRIMITIVE_MAP: &[(&str, PrimitiveTypeKind)] = &[
     ("u16", PrimitiveTypeKind::U16),
     ("u32", PrimitiveTypeKind::U32),
     ("u64", PrimitiveTypeKind::U64),
+    ("usize", PrimitiveTypeKind::Usize),
     ("i8", PrimitiveTypeKind::I8),
     ("i16", PrimitiveTypeKind::I16),
     ("i32", PrimitiveTypeKind::I32),
     ("i64", PrimitiveTypeKind::I64),
+    ("isize", PrimitiveTypeKind::Isize),
     ("bool", PrimitiveTypeKind::Bool),
     ("f32", PrimitiveTypeKind::F32),
     ("f64", PrimitiveTypeKind::F64),
@@ -71,21 +73,44 @@ pub enum PrimitiveTypeKind {
     Bool,
     F32,
     F64,
+    String,
 }
 
-impl From<IntSizes> for PrimitiveTypeKind {
-    fn from(size: IntSizes) -> Self {
+impl std::fmt::Display for PrimitiveTypeKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PrimitiveTypeKind::Unit => write!(f, "unit"),
+            PrimitiveTypeKind::U8 => write!(f, "u8"),
+            PrimitiveTypeKind::U16 => write!(f, "u16"),
+            PrimitiveTypeKind::U32 => write!(f, "u32"),
+            PrimitiveTypeKind::U64 => write!(f, "u64"),
+            PrimitiveTypeKind::Usize => write!(f, "usize"),
+            PrimitiveTypeKind::I8 => write!(f, "i8"),
+            PrimitiveTypeKind::I16 => write!(f, "i16"),
+            PrimitiveTypeKind::I32 => write!(f, "i32"),
+            PrimitiveTypeKind::I64 => write!(f, "i64"),
+            PrimitiveTypeKind::Isize => write!(f, "isize"),
+            PrimitiveTypeKind::Bool => write!(f, "bool"),
+            PrimitiveTypeKind::F32 => write!(f, "f32"),
+            PrimitiveTypeKind::F64 => write!(f, "f64"),
+            PrimitiveTypeKind::String => write!(f, "string"),
+        }
+    }
+}
+
+impl From<IntSize> for PrimitiveTypeKind {
+    fn from(size: IntSize) -> Self {
         match size {
-            IntSizes::I8 => PrimitiveTypeKind::I8,
-            IntSizes::I16 => PrimitiveTypeKind::I16,
-            IntSizes::I32 => PrimitiveTypeKind::I32,
-            IntSizes::I64 => PrimitiveTypeKind::I64,
-            IntSizes::Isize => PrimitiveTypeKind::Isize,
-            IntSizes::U8 => PrimitiveTypeKind::U8,
-            IntSizes::U16 => PrimitiveTypeKind::U16,
-            IntSizes::U32 => PrimitiveTypeKind::U32,
-            IntSizes::U64 => PrimitiveTypeKind::U64,
-            IntSizes::Usize => PrimitiveTypeKind::Usize,
+            IntSize::I8 => PrimitiveTypeKind::I8,
+            IntSize::I16 => PrimitiveTypeKind::I16,
+            IntSize::I32 => PrimitiveTypeKind::I32,
+            IntSize::I64 => PrimitiveTypeKind::I64,
+            IntSize::Isize => PrimitiveTypeKind::Isize,
+            IntSize::U8 => PrimitiveTypeKind::U8,
+            IntSize::U16 => PrimitiveTypeKind::U16,
+            IntSize::U32 => PrimitiveTypeKind::U32,
+            IntSize::U64 => PrimitiveTypeKind::U64,
+            IntSize::Usize => PrimitiveTypeKind::Usize,
         }
     }
 }
@@ -102,12 +127,29 @@ impl From<FloatSizes> for PrimitiveTypeKind {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PrimitiveType {
     pub kind: PrimitiveTypeKind,
-    pub location: Location,
 }
 
 impl PrimitiveType {
-    pub fn new(kind: PrimitiveTypeKind, location: Location) -> Self {
-        Self { kind, location }
+    pub fn new(kind: PrimitiveTypeKind) -> Self {
+        Self { kind }
+    }
+
+    pub fn is_numeral(&self) -> bool {
+        match self.kind {
+            PrimitiveTypeKind::U8
+            | PrimitiveTypeKind::U16
+            | PrimitiveTypeKind::U32
+            | PrimitiveTypeKind::U64
+            | PrimitiveTypeKind::Usize
+            | PrimitiveTypeKind::I8
+            | PrimitiveTypeKind::I16
+            | PrimitiveTypeKind::I32
+            | PrimitiveTypeKind::I64
+            | PrimitiveTypeKind::Isize
+            | PrimitiveTypeKind::F32
+            | PrimitiveTypeKind::F64 => true,
+            PrimitiveTypeKind::Unit | PrimitiveTypeKind::Bool | PrimitiveTypeKind::String => false,
+        }
     }
 }
 
@@ -119,22 +161,23 @@ pub struct NamedType<'ast> {
 
 #[derive(Debug, Copy, Clone)]
 pub enum Type<'ast> {
-    Primitive(PrimitiveType),
+    Primitive(PrimitiveType, Location),
     Named(NamedType<'ast>),
 }
 
 impl<'ast> Type<'ast> {
     pub fn from_identifier(name: &'ast str, location: Location) -> Self {
         if let Some((_, ty)) = PRIMITIVE_MAP.iter().find(|(n, _)| name == *n) {
-            return Type::Primitive(PrimitiveType { kind: *ty, location });
+            return Type::Primitive(PrimitiveType { kind: *ty }, location);
         };
 
         Type::Named(NamedType { name, location })
     }
 
+    #[track_caller]
     pub fn location(&self) -> Location {
         match self {
-            Self::Primitive(primitive) => primitive.location,
+            Self::Primitive(_, location) => *location,
             Self::Named(named) => named.location,
         }
     }
@@ -174,7 +217,7 @@ pub struct FunCallExpr<'ast> {
 
 #[derive(Debug)]
 pub struct AssignExpr<'ast> {
-    pub ident: Box<Expression<'ast>>,
+    pub ident: IdentExpr<'ast>,
     pub location: Location,
     pub value: Box<Expression<'ast>>,
 }
@@ -202,7 +245,7 @@ pub struct FloatLiteralExpr {
 #[derive(Debug)]
 pub struct IntLiteralExpr {
     pub value: Numeral,
-    pub size: Option<IntSizes>,
+    pub size: Option<IntSize>,
     pub location: Location,
 }
 
@@ -216,7 +259,7 @@ pub struct BinaryOpExpr<'ast> {
 
 #[derive(Debug)]
 pub struct ReturnExpr<'ast> {
-    pub value: Box<Expression<'ast>>,
+    pub value: Option<Box<Expression<'ast>>>,
     pub location: Location,
 }
 

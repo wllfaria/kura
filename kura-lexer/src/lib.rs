@@ -4,7 +4,7 @@ pub mod token;
 use std::sync::Arc;
 
 use miette::NamedSource;
-use token::primitive::{FloatSizes, IntSizes, IntoNumeral, Primitive};
+use token::primitive::{FloatSizes, IntSize, IntoNumeral, Primitive};
 use token::{IntoToken, Kind, Operator, Token, Value};
 
 use crate::error::Error;
@@ -295,14 +295,14 @@ impl<'lex> Lexer<'lex> {
                     Ok(numeral) => numeral,
                     Err(_) => unreachable!(),
                 },
-                size: IntSizes::try_from(postfix).ok(),
+                size: IntSize::try_from(postfix).ok(),
             },
             (false, false) => Primitive::Int {
                 value: match literal.as_str().parse_unsigned() {
                     Ok(numeral) => numeral,
                     Err(_) => unreachable!(),
                 },
-                size: IntSizes::try_from(postfix).ok(),
+                size: IntSize::try_from(postfix).ok(),
             },
             (true, _) => Primitive::Float {
                 value: match literal.parse() {

@@ -6,6 +6,12 @@ use super::value::Value;
 use super::{IntoToken, Token};
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+pub enum Signedness {
+    Signed,
+    Unsigned,
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
 pub enum Numeral {
     Signed(i64),
     Unsigned(u64),
@@ -16,6 +22,22 @@ impl Display for Numeral {
         match self {
             Numeral::Signed(val) => write!(f, "{val}"),
             Numeral::Unsigned(val) => write!(f, "{val}"),
+        }
+    }
+}
+
+impl Numeral {
+    pub fn signed_inner(&self) -> i64 {
+        match self {
+            Numeral::Signed(val) => *val,
+            Numeral::Unsigned(_) => unreachable!(),
+        }
+    }
+
+    pub fn signedness(&self) -> Signedness {
+        match self {
+            Numeral::Signed(_) => Signedness::Signed,
+            Numeral::Unsigned(_) => Signedness::Unsigned,
         }
     }
 }
@@ -51,7 +73,7 @@ impl fmt::Display for FloatSizes {
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-pub enum IntSizes {
+pub enum IntSize {
     U8,
     U16,
     U32,
@@ -64,54 +86,55 @@ pub enum IntSizes {
     Isize,
 }
 
-impl IntSizes {
+impl IntSize {
     pub fn is_unsigned(&self) -> bool {
-        matches!(
-            self,
-            IntSizes::U8 | IntSizes::U16 | IntSizes::U32 | IntSizes::U64 | IntSizes::Usize
-        )
+        self.signedness() == Signedness::Unsigned
     }
 
     pub fn is_signed(&self) -> bool {
-        matches!(
-            self,
-            IntSizes::I8 | IntSizes::I16 | IntSizes::I32 | IntSizes::I64 | IntSizes::Isize
-        )
+        self.signedness() == Signedness::Signed
     }
-}
 
-impl fmt::Display for IntSizes {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    pub fn signedness(&self) -> Signedness {
         match self {
-            IntSizes::I8 => write!(f, "i8"),
-            IntSizes::I16 => write!(f, "i16"),
-            IntSizes::I32 => write!(f, "i32"),
-            IntSizes::I64 => write!(f, "i64"),
-            IntSizes::Isize => write!(f, "isize"),
-            IntSizes::U8 => write!(f, "u8"),
-            IntSizes::U16 => write!(f, "u16"),
-            IntSizes::U32 => write!(f, "u32"),
-            IntSizes::U64 => write!(f, "u64"),
-            IntSizes::Usize => write!(f, "usize"),
+            IntSize::U8 | IntSize::U16 | IntSize::U32 | IntSize::U64 | IntSize::Usize => Signedness::Unsigned,
+            IntSize::I8 | IntSize::I16 | IntSize::I32 | IntSize::I64 | IntSize::Isize => Signedness::Signed,
         }
     }
 }
 
-impl TryFrom<&str> for IntSizes {
+impl fmt::Display for IntSize {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            IntSize::I8 => write!(f, "i8"),
+            IntSize::I16 => write!(f, "i16"),
+            IntSize::I32 => write!(f, "i32"),
+            IntSize::I64 => write!(f, "i64"),
+            IntSize::Isize => write!(f, "isize"),
+            IntSize::U8 => write!(f, "u8"),
+            IntSize::U16 => write!(f, "u16"),
+            IntSize::U32 => write!(f, "u32"),
+            IntSize::U64 => write!(f, "u64"),
+            IntSize::Usize => write!(f, "usize"),
+        }
+    }
+}
+
+impl TryFrom<&str> for IntSize {
     type Error = ();
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "i8" => Ok(IntSizes::I8),
-            "i16" => Ok(IntSizes::I16),
-            "i32" => Ok(IntSizes::I32),
-            "i64" => Ok(IntSizes::I64),
-            "isize" => Ok(IntSizes::Isize),
-            "u8" => Ok(IntSizes::U8),
-            "u16" => Ok(IntSizes::U16),
-            "u32" => Ok(IntSizes::U32),
-            "u64" => Ok(IntSizes::U64),
-            "usize" => Ok(IntSizes::Usize),
+            "i8" => Ok(IntSize::I8),
+            "i16" => Ok(IntSize::I16),
+            "i32" => Ok(IntSize::I32),
+            "i64" => Ok(IntSize::I64),
+            "isize" => Ok(IntSize::Isize),
+            "u8" => Ok(IntSize::U8),
+            "u16" => Ok(IntSize::U16),
+            "u32" => Ok(IntSize::U32),
+            "u64" => Ok(IntSize::U64),
+            "usize" => Ok(IntSize::Usize),
             _ => Err(()),
         }
     }
@@ -132,7 +155,7 @@ impl TryFrom<&str> for FloatSizes {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Primitive {
     Bool(bool),
-    Int { value: Numeral, size: Option<IntSizes> },
+    Int { value: Numeral, size: Option<IntSize> },
     Float { value: f64, size: Option<FloatSizes> },
 }
 

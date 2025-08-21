@@ -138,8 +138,7 @@ impl<'par> Parser<'par> {
         let mut statements = vec![];
 
         while !self.lexer.is_empty() {
-            let statement = self.parse_statement()?;
-            statements.push(statement);
+            statements.push(self.parse_statement()?);
         }
 
         Ok(statements)

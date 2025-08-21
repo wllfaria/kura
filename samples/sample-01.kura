@@ -1,4 +1,13 @@
+fun other(arg: usize) => usize { arg + 10usize }
+
 fun main() {
-    const PI = 3.1415;
-    PI + 3.14f32
+    const a = 10usize;
+    const b = other(a);
+
+    if true {
+        const _ = other( 1usize );
+        return;
+    };
+
+    a + b
 }

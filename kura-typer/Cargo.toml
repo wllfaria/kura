@@ -7,3 +7,4 @@ edition.workspace = true
 kura-parser.workspace = true
 kura-lexer.workspace = true
 miette.workspace = true
+thiserror.workspace = true

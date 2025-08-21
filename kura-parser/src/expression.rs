@@ -83,12 +83,15 @@ pub fn parse_expr_block<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<E
                 trailing_expr = Some(Box::new(expr));
                 break;
             }
-            _ => (),
+            _ => {
+                expressions.push(expr);
+            }
         }
     }
 
     let block_end = expect!(lexer, Kind::Op(Operator::RightBrace))?;
     let location = block_start.location.start_byte..block_end.location.end_byte;
+
     Ok(Expression::Block(BlockExpr {
         body: expressions,
         trailing_expr,
@@ -269,16 +272,26 @@ pub fn parse_type_annotation<'parser>(lexer: &mut Lexer<'parser>) -> miette::Res
 fn parse_assign<'parser>(lexer: &mut Lexer<'parser>, left: Expression<'parser>) -> miette::Result<Expression<'parser>> {
     expect!(lexer, Kind::Op(Operator::Equal))?;
 
+    let Expression::Ident(ident) = left else {
+        return Err(Error::new(
+            left.location(),
+            "Assignments are only allowed on identifiers".into(),
+            None,
+            NamedSource::new("file.kr", lexer.source_arc.clone()),
+        )
+        .into());
+    };
+
     let value = match peek!(lexer)? {
         Some(token) if matches!(token.kind, Kind::Op(Operator::LeftBrace)) => parse_expr_block(lexer)?,
         Some(_) => parse_expression(lexer)?,
         _ => unreachable!(),
     };
 
-    let location = left.location().start_byte..value.location().end_byte;
+    let location = ident.location.start_byte..value.location().end_byte;
 
     Ok(Expression::Assign(AssignExpr {
-        ident: Box::new(left),
+        ident,
         location: location.into(),
         value: Box::new(value),
     }))
@@ -304,7 +317,7 @@ fn parse_with_precedence<'parser>(
             }
             Some(token) if matches!(token.kind, Kind::Op(Operator::Equal)) => return parse_assign(lexer, left),
             Some(token) if token.kind.is_binary_op() => {}
-            _ => unreachable!("this should not be allowed"),
+            _ => {}
         }
     }
 
@@ -348,13 +361,17 @@ fn parse_with_precedence<'parser>(
 fn parse_return_expression<'parser>(lexer: &mut Lexer<'parser>) -> miette::Result<Expression<'parser>> {
     let keyword = expect!(lexer, Kind::Return)?;
 
-    let value = parse_expression(lexer)?;
+    let value = if !peek_matches!(lexer, Kind::Op(Operator::SemiColon)) {
+        Some(Box::new(parse_expression(lexer)?))
+    } else {
+        None
+    };
 
     let ending_semi = expect!(lexer, Kind::Op(Operator::SemiColon))?;
 
     let location = keyword.location.start_byte..ending_semi.location.end_byte;
     Ok(Expression::Return(ReturnExpr {
-        value: Box::new(value),
+        value,
         location: location.into(),
     }))
 }
